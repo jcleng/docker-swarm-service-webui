@@ -5,7 +5,7 @@
 ![./img/Screenshot_20250905_174840.png](./img/Screenshot_20250905_174840.png)
 ![./img/Screenshot_20250905_174853.png](./img/Screenshot_20250905_174853.png)
 
-- 实现功能,适用于简单的web服务
+- 实现功能,适用于简单的web服务;推荐搭配`NginxProxyManager/nginx-proxy-manager`管理nginx
 
 1.服务部署
 

@@ -171,8 +171,9 @@ class ClientDocker
      * @return bool
      * @author jcleng
      */
-    public function serviceCreate($service_name, $image, $replicas, $ports)
+    public function serviceCreate($service_name, $image, $replicas, $params)
     {
+        $ports = $params['ports'] ?? [];
         $service = [
             "Name" => $service_name,
             "TaskTemplate" => [
@@ -181,16 +182,21 @@ class ClientDocker
                 ],
                 "ContainerSpec" => [
                     "Image" => $image,
-                    "HealthCheck" => [
-                        "Test" => [
-                            "CMD-SHELL",
-                            "curl --fail http://localhost:80/ || exit 1"
-                        ],
-                        "Interval" => 5000000000,
-                        "Timeout" => 3000000000,
-                        "Retries" => 3,
-                        "StartPeriod" => 45000000000
-                    ]
+                    "HealthCheck" => (function () use ($params) {
+                        if (empty($params['healthCheckCommand'])) {
+                            return [];
+                        }
+                        return [
+                            "Test" => [
+                                "CMD-SHELL",
+                                trim($params['healthCheckCommand'])
+                            ],
+                            "Interval" => 5000000000,
+                            "Timeout" => 3000000000,
+                            "Retries" => 3,
+                            "StartPeriod" => 45000000000
+                        ];
+                    })()
                 ]
             ],
             "Mode" => [

@@ -37,7 +37,12 @@ if (!empty($_GET['action'])) {
                 break;
             case '/serviceCreate':
                 $params = $_REQUEST;
-                echo json_encode($docker->serviceCreate($params['name'], $params['image'], $params['replicas'], $params['ports']));
+                echo json_encode($docker->serviceCreate(
+                    $params['name'],
+                    $params['image'],
+                    $params['replicas'],
+                    $params
+                ));
                 return;
                 break;
             case '/serviceDelete':
