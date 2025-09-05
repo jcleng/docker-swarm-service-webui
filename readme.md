@@ -1,6 +1,9 @@
 ### 简易webui`docker swarm`模式部署服务
 
 ![./img/dingtalkgov_qt_clipbord_pic_3.png](./img/dingtalkgov_qt_clipbord_pic_3.png)
+![./img/Screenshot_20250905_174803.png](./img/Screenshot_20250905_174803.png)
+![./img/Screenshot_20250905_174840.png](./img/Screenshot_20250905_174840.png)
+![./img/Screenshot_20250905_174853.png](./img/Screenshot_20250905_174853.png)
 
 - 实现功能,适用于简单的web服务
 
