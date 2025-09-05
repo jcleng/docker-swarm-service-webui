@@ -421,6 +421,54 @@
             gap: 5px;
         }
 
+        .volume-mapping {
+            background: rgba(160, 174, 192, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--secondary);
+        }
+
+        .volume-fields {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .volume-fields > div {
+            flex: 1;
+        }
+
+        .volume-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .volume-mappings-list {
+            margin-top: 15px;
+        }
+
+        .volume-mapping-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid var(--gray);
+        }
+
+        .volume-mapping-text {
+            font-size: 14px;
+        }
+
+        .volume-mapping-actions {
+            display: flex;
+            gap: 5px;
+        }
+
         .modal-footer {
             padding: 20px;
             background: var(--light);
@@ -492,6 +540,22 @@
         .port-badge {
             background-color: rgba(36, 150, 237, 0.1);
             color: var(--primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .volume-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .volume-badge {
+            background-color: rgba(45, 55, 72, 0.1);
+            color: var(--secondary);
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
@@ -619,6 +683,11 @@
                 gap: 10px;
             }
 
+            .volume-fields {
+                flex-direction: column;
+                gap: 10px;
+            }
+
             .service-meta {
                 flex-direction: column;
                 gap: 8px;
@@ -684,6 +753,11 @@
                                     <div v-if="getPortInfo(service)" class="port-info">
                                         <span v-for="(port, index) in getPortInfo(service).split(', ')" :key="index" class="port-badge">
                                             {{ port }}
+                                        </span>
+                                    </div>
+                                    <div v-if="getVolumeInfo(service)" class="volume-info">
+                                        <span v-for="(volume, index) in getVolumeInfo(service).split(', ')" :key="index" class="volume-badge">
+                                            {{ volume }}
                                         </span>
                                     </div>
                                 </div>
@@ -786,6 +860,45 @@
                                 </div>
                                 <div class="port-mapping-actions">
                                     <button class="btn btn-danger btn-sm" @click="removePortMapping(index)">删除</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 目录绑定开关 -->
+                    <div class="form-group">
+                        <div class="switch-container">
+                            <label class="switch">
+                                <input type="checkbox" v-model="newService.volumeBindingsEnabled">
+                                <span class="slider"></span>
+                            </label>
+                            <span>启用目录绑定</span>
+                        </div>
+
+                        <!-- 目录绑定输入区域 -->
+                        <div v-if="newService.volumeBindingsEnabled" class="volume-mapping">
+                            <div class="volume-fields">
+                                <div>
+                                    <label for="host-path">主机路径</label>
+                                    <input type="text" id="host-path" v-model="newVolume.hostPath" placeholder="例如: /home/user/data">
+                                </div>
+                                <div>
+                                    <label for="container-path">容器路径</label>
+                                    <input type="text" id="container-path" v-model="newVolume.containerPath" placeholder="例如: /app/data">
+                                </div>
+                            </div>
+                            <div class="volume-actions">
+                                <button class="btn btn-primary btn-sm" @click="addVolumeBinding">添加目录绑定</button>
+                            </div>
+                        </div>
+
+                        <div class="volume-mappings-list" v-if="newService.volumes.length > 0">
+                            <div v-for="(volume, index) in newService.volumes" :key="index" class="volume-mapping-item">
+                                <div class="volume-mapping-text">
+                                    {{ volume.hostPath }} → {{ volume.containerPath }}
+                                </div>
+                                <div class="volume-mapping-actions">
+                                    <button class="btn btn-danger btn-sm" @click="removeVolumeBinding(index)">删除</button>
                                 </div>
                             </div>
                         </div>
@@ -939,12 +1052,18 @@
                     image: '',
                     replicas: 1,
                     ports: [], // 存储多个端口映射
+                    volumeBindingsEnabled: false, // 目录绑定开关
+                    volumes: [], // 存储多个目录绑定
                     healthCheckEnabled: false, // 健康检查开关
                     healthCheckCommand: '' // 健康检查命令
                 },
                 newPort: { // 用于添加新端口的临时对象
                     hostPort: null,
                     containerPort: null
+                },
+                newVolume: { // 用于添加新目录绑定的临时对象
+                    hostPath: '',
+                    containerPath: ''
                 },
                 scaleCount: 1,
                 newImage: '',
@@ -1055,6 +1174,15 @@
                     return '';
                 },
 
+                getVolumeInfo(service) {
+                    if (service.Spec.TaskTemplate.ContainerSpec.Mounts) {
+                        return service.Spec.TaskTemplate.ContainerSpec.Mounts.map(mount => {
+                            return `${mount.Source} → ${mount.Target}`;
+                        }).join(', ');
+                    }
+                    return '';
+                },
+
                 formatDate(dateString) {
                     return new Date(dateString).toLocaleString();
                 },
@@ -1155,6 +1283,39 @@
                     this.newService.ports.splice(index, 1);
                 },
 
+                // 添加目录绑定
+                addVolumeBinding() {
+                    if (!this.newVolume.hostPath || !this.newVolume.containerPath) {
+                        this.showError('主机路径和容器路径都必须填写');
+                        return;
+                    }
+
+                    // 检查目录绑定是否已存在
+                    const exists = this.newService.volumes.some(volume =>
+                        volume.hostPath === this.newVolume.hostPath &&
+                        volume.containerPath === this.newVolume.containerPath
+                    );
+
+                    if (exists) {
+                        this.showError('该目录绑定已存在');
+                        return;
+                    }
+
+                    this.newService.volumes.push({
+                        hostPath: this.newVolume.hostPath,
+                        containerPath: this.newVolume.containerPath
+                    });
+
+                    // 清空输入框
+                    this.newVolume.hostPath = '';
+                    this.newVolume.containerPath = '';
+                },
+
+                // 移除目录绑定
+                removeVolumeBinding(index) {
+                    this.newService.volumes.splice(index, 1);
+                },
+
                 async createService() {
                     if (!this.newService.name || !this.newService.image) {
                         this.showError('服务名称和镜像是必填项');
@@ -1171,6 +1332,12 @@
                     this.newService.ports.forEach((port, index) => {
                         formData.append(`ports[${index}][hostPort]`, port.hostPort);
                         formData.append(`ports[${index}][containerPort]`, port.containerPort);
+                    });
+
+                    // 添加目录绑定（使用键值对形式）
+                    this.newService.volumes.forEach((volume, index) => {
+                        formData.append(`volumes[${index}][hostPath]`, volume.hostPath);
+                        formData.append(`volumes[${index}][containerPath]`, volume.containerPath);
                     });
 
                     // 添加健康检查配置
@@ -1204,12 +1371,18 @@
                         image: '',
                         replicas: 1,
                         ports: [],
+                        volumeBindingsEnabled: false,
+                        volumes: [],
                         healthCheckEnabled: false,
                         healthCheckCommand: ''
                     };
                     this.newPort = {
                         hostPort: null,
                         containerPort: null
+                    };
+                    this.newVolume = {
+                        hostPath: '',
+                        containerPath: ''
                     };
                 },
 

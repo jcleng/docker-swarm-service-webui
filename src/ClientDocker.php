@@ -178,10 +178,24 @@ class ClientDocker
             "Name" => $service_name,
             "TaskTemplate" => [
                 "Labels" => [
-                    "create_with" => "php-cli"
+                    "create_with" => "docker-swarm-service-webui"
                 ],
                 "ContainerSpec" => [
                     "Image" => $image,
+                    "Mounts" => (function () use ($params) {
+                        if (empty($params['volumes'])) {
+                            return [];
+                        }
+                        $volumesList = [];
+                        foreach ($params['volumes'] as $_key => $item) {
+                            $volumesList[] = [
+                                "Type" => "bind",
+                                "Source" => $item['hostPath'],
+                                "Target" => $item['containerPath']
+                            ];
+                        }
+                        return $volumesList;
+                    })(),
                     "HealthCheck" => (function () use ($params) {
                         if (empty($params['healthCheckCommand'])) {
                             return [];
