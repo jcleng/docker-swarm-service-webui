@@ -155,7 +155,7 @@ class ClientDocker
                 }
             }
             // 检查非数组空值（null、空字符串）
-            elseif ($value === null || $value === '') {
+            elseif ($value === null || $value === '' || $value === []) {
                 unset($array[$key]);
             }
         }
@@ -167,68 +167,72 @@ class ClientDocker
      * @param string $service_name
      * @param string $image
      * @param int $replicas
-     * @param integer $outSidePort 暴露主机的端口
-     * @param integer $inSidePort 容器内服务的端口
+     * @param array $ports 多个端口键值对
      * @return bool
      * @author jcleng
      */
-    public function serviceCreate($service_name, $image, $replicas, $outSidePort = 8080, $inSidePort = 80)
+    public function serviceCreate($service_name, $image, $replicas, $ports)
     {
-        $response = $this->client->post("/services/create", [
-            'json' => array_merge([
-                "Name" => $service_name,
-                "TaskTemplate" => [
-                    "Labels" => [
-                        "create_with" => "php-cli"
-                    ],
-                    "ContainerSpec" => [
-                        "Image" => $image,
-                        "HealthCheck" => [
-                            "Test" => [
-                                "CMD-SHELL",
-                                "curl --fail http://localhost:80/ || exit 1"
-                            ],
-                            "Interval" => 5000000000,
-                            "Timeout" => 3000000000,
-                            "Retries" => 3,
-                            "StartPeriod" => 45000000000
-                        ]
-                    ]
+        $service = [
+            "Name" => $service_name,
+            "TaskTemplate" => [
+                "Labels" => [
+                    "create_with" => "php-cli"
                 ],
-                "Mode" => [
-                    "Replicated" => [
-                        "Replicas" => $replicas
+                "ContainerSpec" => [
+                    "Image" => $image,
+                    "HealthCheck" => [
+                        "Test" => [
+                            "CMD-SHELL",
+                            "curl --fail http://localhost:80/ || exit 1"
+                        ],
+                        "Interval" => 5000000000,
+                        "Timeout" => 3000000000,
+                        "Retries" => 3,
+                        "StartPeriod" => 45000000000
                     ]
-                ],
-                "EndpointSpec" => [
-                    "Mode" => "vip",
-                    "Ports" => [
-                        [
+                ]
+            ],
+            "Mode" => [
+                "Replicated" => [
+                    "Replicas" => intval($replicas)
+                ]
+            ],
+            "EndpointSpec" => [
+                "Mode" => "vip",
+                "Ports" => (function () use ($ports) {
+                    $portList = [];
+                    foreach ($ports as $_key => $item) {
+                        $portList[] = [
                             "Name" => "string",
                             "Protocol" => "tcp",
-                            "TargetPort" => $inSidePort,
-                            "PublishedPort" => $outSidePort,
+                            "TargetPort" => intval($item['containerPort']),
+                            "PublishedPort" => intval($item['hostPort']),
                             "PublishMode" => "ingress"
-                        ]
-                    ]
-                ],
-                "UpdateConfig" => [
-                    "Parallelism" => 1,
-                    "Delay" => 30000000000,
-                    "FailureAction" => "rollback",
-                    "Monitor" => 15000000000,
-                    "MaxFailureRatio" => 0,
-                    "Order" => "start-first"
-                ],
-                "RollbackConfig" => [
-                    "Parallelism" => 1,
-                    "Delay" => 10000000000,
-                    "FailureAction" => "pause",
-                    "Monitor" => 15000000000,
-                    "MaxFailureRatio" => 0,
-                    "Order" => "start-first"
-                ]
-            ])
+                        ];
+                    }
+                    return $portList;
+                })(),
+            ],
+            "UpdateConfig" => [
+                "Parallelism" => 1,
+                "Delay" => 30000000000,
+                "FailureAction" => "rollback",
+                "Monitor" => 15000000000,
+                "MaxFailureRatio" => 0,
+                "Order" => "start-first"
+            ],
+            "RollbackConfig" => [
+                "Parallelism" => 1,
+                "Delay" => 10000000000,
+                "FailureAction" => "pause",
+                "Monitor" => 15000000000,
+                "MaxFailureRatio" => 0,
+                "Order" => "start-first"
+            ]
+        ];
+        $response = $this->client->post("/services/create", [
+            'json' => $this->removeEmptyKeys($service)
         ]);
         // $update_res = json_decode($response->getBody(), true);
         return true;

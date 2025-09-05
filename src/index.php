@@ -21,32 +21,38 @@ if (!empty($_GET['action'])) {
     }
     $params = json_decode(file_get_contents("php://input"), true);
     header('Content-Type: application/json; charset=utf-8');
-    switch ($_GET['action'] ?? '') {
-        case '/services':
-            echo json_encode($docker->serviceList());
-            return;
-            break;
-        case '/scale':
-            echo json_encode($docker->serviceReplicas($params['id'], $params['replicas']));
-            return;
-            break;
-        case '/updateImage':
-            echo json_encode($docker->serviceRollingUpdateImages($params['id'], $params['image']));
-            return;
-            break;
-        case '/serviceCreate':
-            echo json_encode($docker->serviceCreate($params['name'], $params['image'], $params['replicas'], $params['hostPort'], $params['containerPort']));
-            return;
-            break;
-        case '/serviceDelete':
-            echo json_encode($docker->serviceDelete($params['id']));
-            return;
-        case '/tasks':
-            echo json_encode($docker->tasks($params['id']));
-            return;
-            break;
-        default:
-            # code...
-            break;
+    try {
+        switch ($_GET['action'] ?? '') {
+            case '/services':
+                echo json_encode($docker->serviceList());
+                return;
+                break;
+            case '/scale':
+                echo json_encode($docker->serviceReplicas($params['id'], $params['replicas']));
+                return;
+                break;
+            case '/updateImage':
+                echo json_encode($docker->serviceRollingUpdateImages($params['id'], $params['image']));
+                return;
+                break;
+            case '/serviceCreate':
+                $params = $_REQUEST;
+                echo json_encode($docker->serviceCreate($params['name'], $params['image'], $params['replicas'], $params['ports']));
+                return;
+                break;
+            case '/serviceDelete':
+                echo json_encode($docker->serviceDelete($params['id']));
+                return;
+            case '/tasks':
+                echo json_encode($docker->tasks($params['id']));
+                return;
+                break;
+            default:
+                # code...
+                break;
+        }
+    } catch (\Throwable $th) {
+        http_response_code(500);
+        echo json_encode(['message' => $th->getMessage()]);
     }
 }

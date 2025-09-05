@@ -6,7 +6,6 @@
     <title>Docker Swarm 服务管理</title>
     <script src="./vue.js"></script>
     <script src="./axios.min.js"></script>
-    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> -->
     <style>
         :root {
             --primary: #2496ed;
@@ -104,6 +103,11 @@
         .btn-danger {
             background-color: var(--danger);
             color: white;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 14px;
         }
 
         .btn:hover {
@@ -341,6 +345,8 @@
 
         .modal-body {
             padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
 
         .form-group {
@@ -368,13 +374,51 @@
             box-shadow: 0 0 0 3px rgba(36, 150, 237, 0.2);
         }
 
+        .port-mapping {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
         .port-fields {
             display: flex;
             gap: 15px;
+            margin-bottom: 10px;
         }
 
         .port-fields > div {
             flex: 1;
+        }
+
+        .port-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .port-mappings-list {
+            margin-top: 15px;
+        }
+
+        .port-mapping-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid var(--gray);
+        }
+
+        .port-mapping-text {
+            font-size: 14px;
+        }
+
+        .port-mapping-actions {
+            display: flex;
+            gap: 5px;
         }
 
         .modal-footer {
@@ -528,20 +572,20 @@
     <div id="app">
         <div class="container">
             <header>
-                <h1><i class="fab fa-docker"></i> Docker Swarm 服务管理</h1>
+                <h1>Docker Swarm 服务管理</h1>
                 <div class="header-actions">
                     <div class="auth-status">
                         <span class="auth-status-icon" :class="authToken ? 'auth-active' : 'auth-inactive'"></span>
                         {{ authToken ? '已设置' : '未认证' }}
                     </div>
                     <button @click="loadServices" class="btn btn-secondary">
-                        <i class="fas fa-sync-alt"></i> 刷新服务
+                        刷新服务
                     </button>
                     <button @click="showCreateModal = true" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> 创建服务
+                        创建服务
                     </button>
                     <button @click="showAuthModal = true" class="btn btn-warning">
-                        <i class="fas fa-cog"></i> 认证设置
+                        认证设置
                     </button>
                 </div>
             </header>
@@ -561,10 +605,10 @@
                             <div class="service-header" @click="toggleServiceDetails(service.ID)">
                                 <div class="service-info">
                                     <div class="service-name">{{ service.Spec.Name }}</div>
-                                    <span style="font-size: 16px;"><i class="fas fa-box"></i> {{ getImage(service) }}</span>
+                                    <span style="font-size: 16px;">{{ getImage(service) }}</span>
                                     <div class="service-meta">
-                                        <span><i class="fas fa-clone"></i> 副本: {{getReplicasStatusRuning(service)}}/{{ getReplicasStatus(service) }}</span>
-                                        <span><i class="fas fa-calendar"></i> {{ formatDate(service.CreatedAt) }}</span>
+                                        <span>副本: {{getReplicasStatusRuning(service)}}/{{ getReplicasStatus(service) }}</span>
+                                        <span>{{ formatDate(service.CreatedAt) }}</span>
                                     </div>
                                     <div class="service-id">ID: {{ service.ID.substring(0, 12) }}...</div>
                                     <div v-if="getPortInfo(service)" class="port-info">
@@ -589,7 +633,7 @@
                                 <div class="tasks-title">
                                     <span>任务列表</span>
                                     <button class="refresh-tasks-btn" @click.stop="loadTasks(service.ID)">
-                                        <i class="fas fa-sync-alt"></i> 刷新任务
+                                        刷新任务
                                     </button>
                                 </div>
 
@@ -611,7 +655,7 @@
                                             {{ formatTaskStatus(task.Status.State) }}
                                         </div>
                                         <div class="task-node">
-                                            <i class="fas fa-server"></i> {{ task.NodeID.substring(0, 8) }}
+                                            {{ task.NodeID.substring(0, 8) }}
                                         </div>
                                     </li>
                                 </ul>
@@ -646,16 +690,33 @@
                         <label for="service-replicas">副本数量</label>
                         <input type="number" id="service-replicas" v-model.number="newService.replicas" min="1" value="1">
                     </div>
+
                     <div class="form-group">
                         <label>端口映射</label>
-                        <div class="port-fields">
-                            <div>
-                                <label for="host-port">主机端口</label>
-                                <input type="number" id="host-port" v-model.number="newService.hostPort" min="1" max="65535" placeholder="例如: 8080">
+                        <div class="port-mapping">
+                            <div class="port-fields">
+                                <div>
+                                    <label for="host-port">主机端口</label>
+                                    <input type="number" id="host-port" v-model.number="newPort.hostPort" min="1" max="65535" placeholder="例如: 8080">
+                                </div>
+                                <div>
+                                    <label for="container-port">容器端口</label>
+                                    <input type="number" id="container-port" v-model.number="newPort.containerPort" min="1" max="65535" placeholder="例如: 80">
+                                </div>
                             </div>
-                            <div>
-                                <label for="container-port">容器端口</label>
-                                <input type="number" id="container-port" v-model.number="newService.containerPort" min="1" max="65535" placeholder="例如: 80">
+                            <div class="port-actions">
+                                <button class="btn btn-primary btn-sm" @click="addPortMapping">添加端口映射</button>
+                            </div>
+                        </div>
+
+                        <div class="port-mappings-list" v-if="newService.ports.length > 0">
+                            <div v-for="(port, index) in newService.ports" :key="index" class="port-mapping-item">
+                                <div class="port-mapping-text">
+                                    {{ port.hostPort }} → {{ port.containerPort }}
+                                </div>
+                                <div class="port-mapping-actions">
+                                    <button class="btn btn-danger btn-sm" @click="removePortMapping(index)">删除</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -788,6 +849,9 @@
                     name: '',
                     image: '',
                     replicas: 1,
+                    ports: [] // 存储多个端口映射
+                },
+                newPort: { // 用于添加新端口的临时对象
                     hostPort: null,
                     containerPort: null
                 },
@@ -813,6 +877,11 @@
                         document.getElementById('auth-token').type = 'text';
                     } else {
                         document.getElementById('auth-token').type = 'password';
+                    }
+                },
+                showCreateModal(newVal) {
+                    if (newVal) {
+                        this.resetNewServiceForm();
                     }
                 }
             },
@@ -881,11 +950,10 @@
                     return 'Global';
                 },
                 getReplicasStatusRuning(service) {
-                    serviceId = service?.ID
+                    const serviceId = service?.ID;
                     if (!this.tasks[serviceId]) return '-';
                     return this.tasks[serviceId].filter(task => task.Status.State === 'running').length;
                 },
-
 
                 getPortInfo(service) {
                     if (service.Spec.EndpointSpec && service.Spec.EndpointSpec.Ports) {
@@ -963,25 +1031,64 @@
                     this.showDeleteModal = true;
                 },
 
+                // 添加端口映射
+                addPortMapping() {
+                    if (!this.newPort.hostPort || !this.newPort.containerPort) {
+                        this.showError('主机端口和容器端口都必须填写');
+                        return;
+                    }
+
+                    // 检查端口是否已存在
+                    const exists = this.newService.ports.some(port =>
+                        port.hostPort === this.newPort.hostPort &&
+                        port.containerPort === this.newPort.containerPort
+                    );
+
+                    if (exists) {
+                        this.showError('该端口映射已存在');
+                        return;
+                    }
+
+                    this.newService.ports.push({
+                        hostPort: this.newPort.hostPort,
+                        containerPort: this.newPort.containerPort
+                    });
+
+                    // 清空输入框
+                    this.newPort.hostPort = null;
+                    this.newPort.containerPort = null;
+                },
+
+                // 移除端口映射
+                removePortMapping(index) {
+                    this.newService.ports.splice(index, 1);
+                },
+
                 async createService() {
                     if (!this.newService.name || !this.newService.image) {
                         this.showError('服务名称和镜像是必填项');
                         return;
                     }
 
-                    const serviceData = {
-                        name: this.newService.name,
-                        image: this.newService.image,
-                        replicas: this.newService.replicas
-                    };
+                    // 使用FormData对象以支持键值对形式提交
+                    const formData = new FormData();
+                    formData.append('name', this.newService.name);
+                    formData.append('image', this.newService.image);
+                    formData.append('replicas', this.newService.replicas);
 
-                    if (this.newService.hostPort && this.newService.containerPort) {
-                        serviceData.hostPort = this.newService.hostPort;
-                        serviceData.containerPort = this.newService.containerPort;
-                    }
+                    // 添加端口映射（使用键值对形式）
+                    this.newService.ports.forEach((port, index) => {
+                        formData.append(`ports[${index}][hostPort]`, port.hostPort);
+                        formData.append(`ports[${index}][containerPort]`, port.containerPort);
+                    });
 
                     try {
-                        await axios.post(`${this.API_BASE_URL}/serviceCreate`, serviceData);
+                        await axios.post(`${this.API_BASE_URL}/serviceCreate`, formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        });
+
                         this.showSuccess('服务创建成功');
                         this.showCreateModal = false;
                         this.resetNewServiceForm();
@@ -990,7 +1097,7 @@
                         if (error.response && error.response.status === 401) {
                             this.showError('认证失败，请检查令牌');
                         } else {
-                            this.showError('创建服务失败');
+                            this.showError('创建服务失败: ' + (error.response?.data?.message || error.message));
                         }
                     }
                 },
@@ -1000,6 +1107,9 @@
                         name: '',
                         image: '',
                         replicas: 1,
+                        ports: []
+                    };
+                    this.newPort = {
                         hostPort: null,
                         containerPort: null
                     };
