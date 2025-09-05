@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Swarm 服务管理</title>
+    <script src="./vue.js"></script>
+    <script src="./axios.min.js"></script>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> -->
+    <style>
+        :root {
+            --primary: #2496ed;
+            --primary-dark: #1a7bc9;
+            --secondary: #2d3748;
+            --success: #38a169;
+            --warning: #ecc94b;
+            --danger: #e53e3e;
+            --light: #f7fafc;
+            --dark: #1a202c;
+            --gray: #e2e8f0;
+            --gray-dark: #a0aec0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--gray);
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #252f3f;
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+            color: var(--dark);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .service-list {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .service-item {
+            border-bottom: 1px solid var(--gray);
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .service-item:last-child {
+            border-bottom: none;
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .service-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .service-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .service-meta {
+            display: flex;
+            gap: 20px;
+            color: var(--gray-dark);
+            font-size: 14px;
+            flex-wrap: nowrap;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .service-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: white;
+            font-size: 16px;
+        }
+
+        .scale-btn {
+            background-color: var(--warning);
+        }
+
+        .update-btn {
+            background-color: var(--success);
+        }
+
+        .delete-btn {
+            background-color: var(--danger);
+        }
+
+        .action-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .service-details {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--gray);
+            display: none;
+        }
+
+        .service-details.active {
+            display: block;
+        }
+
+        .tasks-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .refresh-tasks-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            padding: 12px 15px;
+            background: var(--light);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-id {
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--secondary);
+        }
+
+        .task-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-running {
+            background-color: rgba(56, 161, 105, 0.15);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background-color: rgba(236, 201, 75, 0.15);
+            color: #b7791f;
+        }
+
+        .status-failed {
+            background-color: rgba(229, 62, 62, 0.15);
+            color: var(--danger);
+        }
+
+        .status-unknown {
+            background-color: rgba(160, 174, 192, 0.15);
+            color: var(--gray-dark);
+        }
+
+        .status-complete {
+            background-color: rgba(160, 174, 192, 0.15);
+            color: var(--gray-dark);
+        }
+
+        .status-shutdown {
+            background-color: rgba(160, 174, 192, 0.15);
+            color: var(--gray-dark);
+        }
+
+        .task-node {
+            font-size: 12px;
+            color: var(--gray-dark);
+            margin-left: 10px;
+        }
+
+        .task-created {
+            font-size: 12px;
+            color: var(--gray-dark);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 20px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--gray);
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(36, 150, 237, 0.2);
+        }
+
+        .port-fields {
+            display: flex;
+            gap: 15px;
+        }
+
+        .port-fields > div {
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            background: var(--light);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1100;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            background-color: var(--success);
+        }
+
+        .toast-error {
+            background-color: var(--danger);
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-dark);
+        }
+
+        .service-id {
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--gray-dark);
+            margin-top: 5px;
+        }
+
+        .port-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .port-badge {
+            background-color: rgba(36, 150, 237, 0.1);
+            color: var(--primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .task-loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--gray-dark);
+        }
+
+        .task-error {
+            color: var(--danger);
+            padding: 10px;
+            text-align: center;
+        }
+
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 15px;
+            font-size: 14px;
+        }
+
+        .auth-status-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .auth-active {
+            background-color: var(--success);
+        }
+
+        .auth-inactive {
+            background-color: var(--gray-dark);
+        }
+
+        @media (max-width: 768px) {
+            .service-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .service-actions {
+                align-self: flex-end;
+            }
+
+            .port-fields {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .service-meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .task-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .task-info {
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <header>
+                <h1><i class="fab fa-docker"></i> Docker Swarm 服务管理</h1>
+                <div class="header-actions">
+                    <div class="auth-status">
+                        <span class="auth-status-icon" :class="authToken ? 'auth-active' : 'auth-inactive'"></span>
+                        {{ authToken ? '已设置' : '未认证' }}
+                    </div>
+                    <button @click="loadServices" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i> 刷新服务
+                    </button>
+                    <button @click="showCreateModal = true" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 创建服务
+                    </button>
+                    <button @click="showAuthModal = true" class="btn btn-warning">
+                        <i class="fas fa-cog"></i> 认证设置
+                    </button>
+                </div>
+            </header>
+
+            <main>
+                <div class="service-list">
+                    <div v-if="loading" class="loading">
+                        <p><span class="spinner"></span> 正在加载服务列表...</p>
+                    </div>
+
+                    <div v-else-if="services.length === 0" class="service-item">
+                        <p>没有运行中的服务</p>
+                    </div>
+
+                    <div v-else>
+                        <div v-for="service in services" :key="service.ID" class="service-item">
+                            <div class="service-header" @click="toggleServiceDetails(service.ID)">
+                                <div class="service-info">
+                                    <div class="service-name">{{ service.Spec.Name }}</div>
+                                    <span style="font-size: 16px;"><i class="fas fa-box"></i> {{ getImage(service) }}</span>
+                                    <div class="service-meta">
+                                        <span><i class="fas fa-clone"></i> 副本: {{getReplicasStatusRuning(service)}}/{{ getReplicasStatus(service) }}</span>
+                                        <span><i class="fas fa-calendar"></i> {{ formatDate(service.CreatedAt) }}</span>
+                                    </div>
+                                    <div class="service-id">ID: {{ service.ID.substring(0, 12) }}...</div>
+                                    <div v-if="getPortInfo(service)" class="port-info">
+                                        <span v-for="(port, index) in getPortInfo(service).split(', ')" :key="index" class="port-badge">
+                                            {{ port }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="service-actions">
+                                    <button class="action-btn scale-btn" title="伸缩副本" @click.stop="openScaleModal(service)">
+                                        缩
+                                    </button>
+                                    <button class="action-btn update-btn" title="更新镜像" @click.stop="openUpdateModal(service)">
+                                        镜
+                                    </button>
+                                    <button class="action-btn delete-btn" title="删除服务" @click.stop="openDeleteModal(service)">
+                                        删
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="service-details" :class="{ active: expandedServices.includes(service.ID) }">
+                                <div class="tasks-title">
+                                    <span>任务列表</span>
+                                    <button class="refresh-tasks-btn" @click.stop="loadTasks(service.ID)">
+                                        <i class="fas fa-sync-alt"></i> 刷新任务
+                                    </button>
+                                </div>
+
+                                <div v-if="tasksLoading[service.ID]" class="task-loading">
+                                    <p><span class="spinner"></span> 正在加载任务列表...</p>
+                                </div>
+
+                                <div v-else-if="tasksError[service.ID]" class="task-error">
+                                    <p>加载任务失败: {{ tasksError[service.ID] }}</p>
+                                </div>
+
+                                <ul v-else-if="tasks[service.ID] && tasks[service.ID].length > 0" class="task-list">
+                                    <li v-for="task in tasks[service.ID]" :key="task.ID" class="task-item">
+                                        <div class="task-info">
+                                            <div class="task-id">{{ task.ID.substring(0, 12) }}</div>
+                                            <div class="task-created">创建于: {{ formatDate(task.CreatedAt) }}</div>
+                                        </div>
+                                        <div class="task-status" :class="getStatusClass(task.Status.State)">
+                                            {{ formatTaskStatus(task.Status.State) }}
+                                        </div>
+                                        <div class="task-node">
+                                            <i class="fas fa-server"></i> {{ task.NodeID.substring(0, 8) }}
+                                        </div>
+                                    </li>
+                                </ul>
+
+                                <div v-else class="task-loading">
+                                    <p>该服务没有任务</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 创建服务模态框 -->
+        <div class="modal" :class="{ active: showCreateModal }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">创建新服务</h2>
+                    <button class="close-btn" @click="showCreateModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="service-name">服务名称</label>
+                        <input type="text" id="service-name" v-model="newService.name" placeholder="输入服务名称">
+                    </div>
+                    <div class="form-group">
+                        <label for="service-image">镜像名称</label>
+                        <input type="text" id="service-image" v-model="newService.image" placeholder="例如: nginx:latest">
+                    </div>
+                    <div class="form-group">
+                        <label for="service-replicas">副本数量</label>
+                        <input type="number" id="service-replicas" v-model.number="newService.replicas" min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>端口映射</label>
+                        <div class="port-fields">
+                            <div>
+                                <label for="host-port">主机端口</label>
+                                <input type="number" id="host-port" v-model.number="newService.hostPort" min="1" max="65535" placeholder="例如: 8080">
+                            </div>
+                            <div>
+                                <label for="container-port">容器端口</label>
+                                <input type="number" id="container-port" v-model.number="newService.containerPort" min="1" max="65535" placeholder="例如: 80">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="showCreateModal = false">取消</button>
+                    <button class="btn btn-primary" @click="createService">创建服务</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 伸缩副本模态框 -->
+        <div class="modal" :class="{ active: showScaleModal }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">伸缩服务副本</h2>
+                    <button class="close-btn" @click="showScaleModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="scale-count">副本数量</label>
+                        <input type="number" id="scale-count" v-model.number="scaleCount" min="0" value="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="showScaleModal = false">取消</button>
+                    <button class="btn btn-primary" @click="scaleService">确认伸缩</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 更新镜像模态框 -->
+        <div class="modal" :class="{ active: showUpdateModal }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">更新服务镜像</h2>
+                    <button class="close-btn" @click="showUpdateModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="new-image">新镜像版本</label>
+                        <input type="text" id="new-image" v-model="newImage" placeholder="例如: nginx:1.23">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="showUpdateModal = false">取消</button>
+                    <button class="btn btn-primary" @click="updateServiceImage">更新镜像</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 删除服务确认模态框 -->
+        <div class="modal" :class="{ active: showDeleteModal }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">删除服务</h2>
+                    <button class="close-btn" @click="showDeleteModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要删除服务 <strong>{{ serviceToDeleteName }}</strong> 吗？此操作不可逆。</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="showDeleteModal = false">取消</button>
+                    <button class="btn btn-danger" @click="deleteService">确认删除</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 认证设置模态框 -->
+        <div class="modal" :class="{ active: showAuthModal }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">认证设置</h2>
+                    <button class="close-btn" @click="showAuthModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="auth-token">Authorization Token</label>
+                        <input type="password" id="auth-token" v-model="authTokenInput" placeholder="输入认证令牌">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" v-model="showToken"> 显示令牌
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" @click="clearAuthToken">清除令牌</button>
+                    <button class="btn btn-secondary" @click="showAuthModal = false">取消</button>
+                    <button class="btn btn-primary" @click="saveAuthToken">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 通知Toast -->
+        <div class="toast" :class="['show', toastClass]" v-if="toastMessage">
+            {{ toastMessage }}
+        </div>
+    </div>
+
+    <script>
+        // 设置axios拦截器，添加Authorization头
+        axios.interceptors.request.use(config => {
+            const authToken = localStorage.getItem('authToken');
+            if (authToken) {
+                config.headers.Authorization = authToken;
+            }
+            return config;
+        }, error => {
+            return Promise.reject(error);
+        });
+
+        new Vue({
+            el: '#app',
+            data: {
+                services: [],
+                tasks: {}, // 存储每个服务的任务列表
+                tasksLoading: {}, // 每个服务的任务加载状态
+                tasksError: {}, // 每个服务的任务加载错误信息
+                loading: true,
+                expandedServices: [],
+                showCreateModal: false,
+                showScaleModal: false,
+                showUpdateModal: false,
+                showDeleteModal: false,
+                showAuthModal: false,
+                currentService: null,
+                serviceToDeleteName: '',
+                newService: {
+                    name: '',
+                    image: '',
+                    replicas: 1,
+                    hostPort: null,
+                    containerPort: null
+                },
+                scaleCount: 1,
+                newImage: '',
+                toastMessage: '',
+                toastClass: '',
+                toastTimer: null,
+                authTokenInput: '',
+                showToken: false
+            },
+            computed: {
+                API_BASE_URL() {
+                    return '/index.php?action=';
+                },
+                authToken() {
+                    return localStorage.getItem('authToken');
+                }
+            },
+            watch: {
+                showToken(newVal) {
+                    if (newVal) {
+                        document.getElementById('auth-token').type = 'text';
+                    } else {
+                        document.getElementById('auth-token').type = 'password';
+                    }
+                }
+            },
+            mounted() {
+                // 从localStorage加载认证令牌
+                const savedToken = localStorage.getItem('authToken');
+                if (savedToken) {
+                    this.authTokenInput = savedToken;
+                }
+
+                this.loadServices();
+            },
+            methods: {
+                async loadServices() {
+                    this.loading = true;
+                    try {
+                        const response = await axios.get(`${this.API_BASE_URL}/services`);
+                        this.services = response.data;
+
+                        // 重置任务数据
+                        this.tasks = {};
+                        this.tasksLoading = {};
+                        this.tasksError = {};
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            this.showError('认证失败，请检查令牌');
+                        } else {
+                            this.showError(error.message || '加载服务列表失败');
+                        }
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                // 加载特定服务的任务
+                async loadTasks(serviceId) {
+                    // 设置加载状态
+                    this.$set(this.tasksLoading, serviceId, true);
+                    this.$set(this.tasksError, serviceId, null);
+
+                    try {
+                        const response = await axios.post(`${this.API_BASE_URL}/tasks`, {id: serviceId});
+
+                        this.$set(this.tasks, serviceId, response.data);
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            this.$set(this.tasksError, serviceId, '认证失败，请检查令牌');
+                        } else {
+                            this.$set(this.tasksError, serviceId, error.message || '加载任务失败');
+                        }
+                        console.error(`加载服务 ${serviceId} 的任务失败:`, error);
+                    } finally {
+                        this.$set(this.tasksLoading, serviceId, false);
+                    }
+                },
+
+                getImage(service) {
+                    return service.Spec.TaskTemplate.ContainerSpec.Image;
+                },
+
+                getReplicasStatus(service) {
+                    if (service.Spec.Mode.Replicated) {
+                        const replicas = service.Spec.Mode.Replicated.Replicas || 0;
+                        return `${replicas}`;
+                    }
+                    return 'Global';
+                },
+                getReplicasStatusRuning(service) {
+                    serviceId = service?.ID
+                    if (!this.tasks[serviceId]) return '-';
+                    return this.tasks[serviceId].filter(task => task.Status.State === 'running').length;
+                },
+
+
+                getPortInfo(service) {
+                    if (service.Spec.EndpointSpec && service.Spec.EndpointSpec.Ports) {
+                        return service.Spec.EndpointSpec.Ports.map(port => {
+                            return `${port.PublishedPort} → ${port.TargetPort}`;
+                        }).join(', ');
+                    }
+                    return '';
+                },
+
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleString();
+                },
+
+                toggleServiceDetails(serviceId) {
+                    const index = this.expandedServices.indexOf(serviceId);
+                    if (index > -1) {
+                        this.expandedServices.splice(index, 1);
+                    } else {
+                        this.expandedServices.push(serviceId);
+
+                        // 如果还没有加载过任务，则加载任务
+                        if (!this.tasks[serviceId] && !this.tasksLoading[serviceId]) {
+                            this.loadTasks(serviceId);
+                        }
+                    }
+                },
+
+                formatTaskStatus(status) {
+                    const statusMap = {
+                        'running': '运行中',
+                        'pending': '等待中',
+                        'failed': '失败',
+                        'complete': '已完成',
+                        'shutdown': '已关闭',
+                        'rejected': '拒绝',
+                        'unknown': '未知'
+                    };
+                    return statusMap[status] || status;
+                },
+
+                getStatusClass(status) {
+                    switch(status) {
+                        case 'running': return 'status-running';
+                        case 'pending': return 'status-pending';
+                        case 'failed': return 'status-failed';
+                        case 'complete': return 'status-complete';
+                        case 'shutdown': return 'status-shutdown';
+                        default: return 'status-unknown';
+                    }
+                },
+
+                openScaleModal(service) {
+                    this.currentService = service;
+                    this.scaleCount = this.getReplicasCount(service);
+                    this.showScaleModal = true;
+                },
+
+                getReplicasCount(service) {
+                    if (service && service.Spec.Mode.Replicated) {
+                        return service.Spec.Mode.Replicated.Replicas || 1;
+                    }
+                    return 1;
+                },
+
+                openUpdateModal(service) {
+                    this.currentService = service;
+                    this.newImage = this.getImage(service).split('@')[0];
+                    this.showUpdateModal = true;
+                },
+
+                openDeleteModal(service) {
+                    this.currentService = service;
+                    this.serviceToDeleteName = service.Spec.Name;
+                    this.showDeleteModal = true;
+                },
+
+                async createService() {
+                    if (!this.newService.name || !this.newService.image) {
+                        this.showError('服务名称和镜像是必填项');
+                        return;
+                    }
+
+                    const serviceData = {
+                        name: this.newService.name,
+                        image: this.newService.image,
+                        replicas: this.newService.replicas
+                    };
+
+                    if (this.newService.hostPort && this.newService.containerPort) {
+                        serviceData.hostPort = this.newService.hostPort;
+                        serviceData.containerPort = this.newService.containerPort;
+                    }
+
+                    try {
+                        await axios.post(`${this.API_BASE_URL}/serviceCreate`, serviceData);
+                        this.showSuccess('服务创建成功');
+                        this.showCreateModal = false;
+                        this.resetNewServiceForm();
+                        this.loadServices();
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            this.showError('认证失败，请检查令牌');
+                        } else {
+                            this.showError('创建服务失败');
+                        }
+                    }
+                },
+
+                resetNewServiceForm() {
+                    this.newService = {
+                        name: '',
+                        image: '',
+                        replicas: 1,
+                        hostPort: null,
+                        containerPort: null
+                    };
+                },
+
+                async scaleService() {
+                    if (isNaN(this.scaleCount) || this.scaleCount < 0) {
+                        this.showError('副本数量必须是非负整数');
+                        return;
+                    }
+
+                    try {
+                        await axios.post(`${this.API_BASE_URL}/scale`, {
+                            replicas: this.scaleCount,
+                            id: this.currentService.ID
+                        });
+                        this.showSuccess('服务伸缩成功');
+                        this.showScaleModal = false;
+
+                        // 刷新受影响服务的任务
+                        if (this.tasks[this.currentService.ID]) {
+                            this.loadTasks(this.currentService.ID);
+                        }
+
+                        this.loadServices();
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            this.showError('认证失败，请检查令牌');
+                        } else {
+                            this.showError('服务伸缩失败');
+                        }
+                    }
+                },
+
+                async updateServiceImage() {
+                    if (!this.newImage) {
+                        this.showError('镜像名称不能为空');
+                        return;
+                    }
+
+                    try {
+                        await axios.post(`${this.API_BASE_URL}/updateImage`, {
+                            image: this.newImage,
+                            id: this.currentService.ID
+                        });
+                        this.showSuccess('镜像更新成功');
+                        this.showUpdateModal = false;
+
+                        // 刷新受影响服务的任务
+                        if (this.tasks[this.currentService.ID]) {
+                            this.loadTasks(this.currentService.ID);
+                        }
+
+                        this.loadServices();
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            this.showError('认证失败，请检查令牌');
+                        } else {
+                            this.showError('镜像更新失败');
+                        }
+                    }
+                },
+
+                async deleteService() {
+                    try {
+                        await axios.post(`${this.API_BASE_URL}/serviceDelete`, {
+                            id: this.currentService.ID
+                        });
+                        this.showSuccess('服务删除成功');
+                        this.showDeleteModal = false;
+
+                        // 从任务列表中移除已删除的服务
+                        if (this.tasks[this.currentService.ID]) {
+                            this.$delete(this.tasks, this.currentService.ID);
+                        }
+
+                        this.loadServices();
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            this.showError('认证失败，请检查令牌');
+                        } else {
+                            this.showError('服务删除失败');
+                        }
+                    }
+                },
+
+                saveAuthToken() {
+                    if (this.authTokenInput) {
+                        localStorage.setItem('authToken', this.authTokenInput);
+                        this.showSuccess('认证令牌已保存');
+                        this.showAuthModal = false;
+                        this.loadServices(); // 重新加载服务
+                    } else {
+                        this.showError('请输入认证令牌');
+                    }
+                },
+
+                clearAuthToken() {
+                    localStorage.removeItem('authToken');
+                    this.authTokenInput = '';
+                    this.showSuccess('认证令牌已清除');
+                    this.showAuthModal = false;
+                    this.loadServices(); // 重新加载服务
+                },
+
+                showSuccess(message) {
+                    this.showToast(message, 'toast-success');
+                },
+
+                showError(message) {
+                    this.showToast(message, 'toast-error');
+                },
+
+                showToast(message, type) {
+                    // 清除之前的定时器
+                    if (this.toastTimer) {
+                        clearTimeout(this.toastTimer);
+                    }
+
+                    this.toastMessage = message;
+                    this.toastClass = type;
+
+                    // 3秒后隐藏toast
+                    this.toastTimer = setTimeout(() => {
+                        this.toastMessage = '';
+                        this.toastClass = '';
+                    }, 3000);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

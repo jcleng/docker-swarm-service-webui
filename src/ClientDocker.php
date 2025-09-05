@@ -1,0 +1,248 @@
+<?php
+
+use \GuzzleHttp\Client;
+
+class ClientDocker
+{
+    private $client;
+    public function __construct($socketPath)
+    {
+        $this->client = new Client([
+            'base_uri' => 'http://localhost', // 域名会被忽略，但需要设置
+            'handler' => (function () use ($socketPath) {
+                $handler = new \GuzzleHttp\Handler\CurlHandler();
+                $stack = \GuzzleHttp\HandlerStack::create($handler);
+                $stack->push(function (callable $handler) use ($socketPath) {
+                    return function ($request, array $options) use ($handler, $socketPath) {
+                        $options['curl'] = [
+                            CURLOPT_UNIX_SOCKET_PATH => $socketPath
+                        ];
+                        return $handler($request, $options);
+                    };
+                });
+                return $stack;
+            })(),
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json'
+            ]
+        ]);
+    }
+    /**
+     * 获取请求client
+     *
+     * @return \GuzzleHttp\Client
+     * @author jcleng
+     */
+    public function getClient()
+    {
+        return $this->client;
+    }
+    /**
+     * 获取服务的版本号
+     *
+     * @param string $service_name
+     * @return int
+     * @author jcleng
+     */
+    public function serviceVersion($service_name)
+    {
+        $response = $this->client->get("/services/$service_name");
+        return json_decode($response->getBody(), true)['Version']['Index'] ?? null;
+    }
+    /**
+     * 获取任务列表
+     *
+     * @param string $service_name
+     * @return array 数组按照ID降序
+     * @author jcleng
+     */
+    public function tasks($service_name)
+    {
+        $task = $this->client->get("/tasks?filters=" . json_encode([
+            'service' => [
+                $service_name => true
+            ]
+        ]));
+        $task_res = json_decode($task->getBody(), true);
+        usort($task_res, function ($a, $b) {
+            $a = $a['Version']['Index'];
+            $b = $b['Version']['Index'];
+            if ($a == $b) return 0;
+            return ($a > $b) ? -1 : 1;
+        });
+        return $task_res;
+    }
+    /**
+     * 获取服务详情
+     *
+     * @param string $service_name
+     * @return array
+     * @author jcleng
+     */
+    public function serviceInspect($service_name)
+    {
+        $response = $this->client->get("/services/$service_name");
+        $update_res = json_decode($response->getBody(), true);
+        return $update_res;
+    }
+    /**
+     * 服务列表
+     *
+     * @return array
+     * @author jcleng
+     */
+    public function serviceList()
+    {
+        $response = $this->client->get("/services");
+        $update_res = json_decode($response->getBody(), true);
+        return $update_res;
+    }
+    /**
+     * 服务平滑更新镜像创建任务
+     * * 注意时间是纳秒, 有基于curl的80健康检查且自动回滚
+     * @param string $service_name
+     * @return bool
+     * @author jcleng
+     */
+    public function serviceRollingUpdateImages($service_name, $image)
+    {
+        $version = $this->serviceVersion($service_name);
+        $inspect = $this->serviceInspect($service_name);
+        $update_data = $inspect['Spec'];
+        $update_data['TaskTemplate']['ContainerSpec']['Image'] = $image;
+        $update_data = $this->removeEmptyKeys($update_data);
+        $response = $this->client->post("/services/$service_name/update?version=$version", [
+            'json' => $update_data
+        ]);
+        return true;
+    }
+    /**
+     * 缩放服务pod创建任务
+     *
+     * @param string $service_name
+     * @param int $replicas
+     * @return bool
+     * @author jcleng
+     */
+    public function serviceReplicas($service_name, $replicas)
+    {
+        $version = $this->serviceVersion($service_name);
+        $inspect = $this->serviceInspect($service_name);
+        $update_data = $inspect['Spec'];
+        $update_data['Mode']['Replicated']['Replicas'] = $replicas;
+        $update_data = $this->removeEmptyKeys($update_data);
+        $response = $this->client->post("/services/$service_name/update?version=$version", [
+            'json' => $update_data
+        ]);
+        return true;
+    }
+    /**
+     * 递归去掉空数组
+     *
+     * @param array $array
+     * @return array
+     * @author jcleng
+     */
+    public function removeEmptyKeys(array $array): array
+    {
+        foreach ($array as $key => $value) {
+            // 递归处理子数组
+            if (is_array($value)) {
+                $array[$key] = $this->removeEmptyKeys($value);
+                if (empty($array[$key])) {
+                    unset($array[$key]);
+                }
+            }
+            // 检查非数组空值（null、空字符串）
+            elseif ($value === null || $value === '') {
+                unset($array[$key]);
+            }
+        }
+        return $array;
+    }
+    /**
+     * 创建服务任务
+     * * 带有curl 80的健康检查, 以及平滑更新
+     * @param string $service_name
+     * @param string $image
+     * @param int $replicas
+     * @param integer $outSidePort 暴露主机的端口
+     * @param integer $inSidePort 容器内服务的端口
+     * @return bool
+     * @author jcleng
+     */
+    public function serviceCreate($service_name, $image, $replicas, $outSidePort = 8080, $inSidePort = 80)
+    {
+        $response = $this->client->post("/services/create", [
+            'json' => array_merge([
+                "Name" => $service_name,
+                "TaskTemplate" => [
+                    "Labels" => [
+                        "create_with" => "php-cli"
+                    ],
+                    "ContainerSpec" => [
+                        "Image" => $image,
+                        "HealthCheck" => [
+                            "Test" => [
+                                "CMD-SHELL",
+                                "curl --fail http://localhost:80/ || exit 1"
+                            ],
+                            "Interval" => 5000000000,
+                            "Timeout" => 3000000000,
+                            "Retries" => 3,
+                            "StartPeriod" => 45000000000
+                        ]
+                    ]
+                ],
+                "Mode" => [
+                    "Replicated" => [
+                        "Replicas" => $replicas
+                    ]
+                ],
+                "EndpointSpec" => [
+                    "Mode" => "vip",
+                    "Ports" => [
+                        [
+                            "Name" => "string",
+                            "Protocol" => "tcp",
+                            "TargetPort" => $inSidePort,
+                            "PublishedPort" => $outSidePort,
+                            "PublishMode" => "ingress"
+                        ]
+                    ]
+                ],
+                "UpdateConfig" => [
+                    "Parallelism" => 1,
+                    "Delay" => 30000000000,
+                    "FailureAction" => "rollback",
+                    "Monitor" => 15000000000,
+                    "MaxFailureRatio" => 0,
+                    "Order" => "start-first"
+                ],
+                "RollbackConfig" => [
+                    "Parallelism" => 1,
+                    "Delay" => 10000000000,
+                    "FailureAction" => "pause",
+                    "Monitor" => 15000000000,
+                    "MaxFailureRatio" => 0,
+                    "Order" => "start-first"
+                ]
+            ])
+        ]);
+        // $update_res = json_decode($response->getBody(), true);
+        return true;
+    }
+    /**
+     * 删除服务
+     * 删除之后tasks也不存在了
+     * @param string $service_name
+     * @return bool
+     * @author jcleng
+     */
+    public function serviceDelete($service_name)
+    {
+        $response = $this->client->delete("/services/$service_name");
+        return true;
+    }
+}
