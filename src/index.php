@@ -1,7 +1,10 @@
 <?php
 include_once "./vendor/autoload.php";
 include_once "./ClientDocker.php";
+include_once "./Dbmanager.php";
 ini_set('date.timezone', 'Asia/Shanghai');
+
+use think\facade\Db;
 
 /**
 composer require guzzlehttp/guzzle
@@ -10,6 +13,7 @@ https://docs.docker.com/reference/api/engine/version/v1.50/#tag/Service/operatio
 
 $socketPath = '/var/run/docker.sock';
 $docker = (new ClientDocker($socketPath));
+Dbmanager::init();
 // ! 获取对应节点的任务列表
 // $docker->serviceDelete('test');
 if (!empty($_GET['action'])) {
@@ -52,6 +56,12 @@ if (!empty($_GET['action'])) {
                 echo json_encode($docker->tasks($params['id']));
                 return;
                 break;
+            case '/login_list':
+                echo json_encode([
+                    'data' => Db::table('login')->select()
+                ]);
+                return;
+                break;
             default:
                 # code...
                 break;
@@ -60,4 +70,8 @@ if (!empty($_GET['action'])) {
         http_response_code(500);
         echo json_encode(['message' => $th->getMessage()]);
     }
+}
+if (PHP_SAPI == 'cli') {
+    $list = Db::table('login')->select();
+    var_dump($list);
 }

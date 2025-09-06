@@ -4,39 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Docker Swarm 服务管理</title>
-    <script src="./vue.js"></script>
-    <script src="./axios.min.js"></script>
-    <style>
-        :root {
-            --primary: #2496ed;
-            --primary-dark: #1a7bc9;
-            --secondary: #2d3748;
-            --success: #38a169;
-            --warning: #ecc94b;
-            --danger: #e53e3e;
-            --light: #f7fafc;
-            --dark: #1a202c;
-            --gray: #e2e8f0;
-            --gray-dark: #a0aec0;
-        }
+    <script src="./dist/vue.js"></script>
+    <script src="./dist/axios.min.js"></script>
 
+    <link rel="stylesheet" href="./dist/index.css">
+    <script src="./dist/index.js"></script>
+    <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
             background-color: #f5f7fa;
-            color: var(--dark);
+            color: #303133;
             line-height: 1.5;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 15px;
+            padding: 20px;
         }
 
         header {
@@ -44,12 +34,12 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--gray);
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ebeef5;
         }
 
         h1 {
-            color: var(--primary);
+            color: #409EFF;
             font-size: 24px;
             display: flex;
             align-items: center;
@@ -61,89 +51,28 @@
             gap: 12px;
         }
 
-        .btn {
-            padding: 8px 16px;
-            border-radius: 5px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            transition: all 0.2s ease;
-            font-size: 14px;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-        }
-
-        .btn-secondary {
-            background-color: var(--secondary);
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background-color: #252f3f;
-        }
-
-        .btn-success {
-            background-color: var(--success);
-            color: white;
-        }
-
-        .btn-warning {
-            background-color: var(--warning);
-            color: var(--dark);
-        }
-
-        .btn-danger {
-            background-color: var(--danger);
-            color: white;
-        }
-
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
         .service-list {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-
-        .service-item {
-            border-bottom: 1px solid var(--gray);
-            padding: 12px 15px;
-            transition: all 0.2s ease;
-        }
-
-        .service-item:last-child {
-            border-bottom: none;
+            margin-top: 20px;
         }
 
         .service-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            cursor: pointer;
+            position: relative;
+            width: 100%;
+        }
+
+        .el-collapse-item__header {
+            height: 120px;
+            line-height: 22px;
+            padding: 12px;
+        }
+        .el-collapse-item__content {
+            padding: 12px;
         }
 
         .service-info {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
             flex: 1;
         }
 
@@ -151,18 +80,17 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
         }
 
         .service-name {
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 600;
-            color: var(--dark);
         }
 
         .service-image {
             font-size: 14px;
-            color: var(--gray-dark);
+            color: #909399;
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -172,9 +100,24 @@
         .service-meta {
             display: flex;
             gap: 15px;
-            color: var(--gray-dark);
+            color: #909399;
             font-size: 13px;
             flex-wrap: wrap;
+            margin-top: 5px;
+        }
+
+        .service-id {
+            font-family: monospace;
+            font-size: 12px;
+            color: #909399;
+            margin-top: 3px;
+        }
+
+        .port-info, .volume-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
         }
 
         .service-actions {
@@ -183,51 +126,10 @@
             margin-left: 10px;
         }
 
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: none;
-            color: white;
-            font-size: 14px;
-        }
-
-        .scale-btn {
-            background-color: var(--warning);
-        }
-
-        .update-btn {
-            background-color: var(--success);
-        }
-
-        .delete-btn {
-            background-color: var(--danger);
-        }
-
-        .action-btn:hover {
-            transform: scale(1.05);
-        }
-
-        .service-details {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px dashed var(--gray);
-            display: none;
-        }
-
-        .service-details.active {
-            display: block;
-        }
-
         .tasks-title {
             font-weight: 600;
             margin-bottom: 8px;
-            color: var(--secondary);
+            color: #606266;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -237,7 +139,7 @@
         .refresh-tasks-btn {
             background: none;
             border: none;
-            color: var(--primary);
+            color: #409EFF;
             cursor: pointer;
             font-size: 13px;
             display: flex;
@@ -251,7 +153,7 @@
 
         .task-item {
             padding: 8px 10px;
-            background: var(--light);
+            background: #f5f7fa;
             border-radius: 5px;
             margin-bottom: 6px;
             display: flex;
@@ -263,7 +165,7 @@
         .task-id {
             font-family: monospace;
             font-size: 12px;
-            color: var(--secondary);
+            color: #606266;
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -278,99 +180,43 @@
         }
 
         .status-running {
-            background-color: rgba(56, 161, 105, 0.15);
-            color: var(--success);
+            background-color: rgba(103, 194, 58, 0.15);
+            color: #67c23a;
         }
 
         .status-pending {
-            background-color: rgba(236, 201, 75, 0.15);
-            color: #b7791f;
+            background-color: rgba(230, 162, 60, 0.15);
+            color: #e6a23c;
         }
 
         .status-failed {
-            background-color: rgba(229, 62, 62, 0.15);
-            color: var(--danger);
+            background-color: rgba(245, 108, 108, 0.15);
+            color: #f56c6c;
         }
 
-        .status-unknown {
-            background-color: rgba(160, 174, 192, 0.15);
-            color: var(--gray-dark);
-        }
-
-        .status-complete {
-            background-color: rgba(160, 174, 192, 0.15);
-            color: var(--gray-dark);
-        }
-
-        .status-shutdown {
-            background-color: rgba(160, 174, 192, 0.15);
-            color: var(--gray-dark);
+        .status-unknown, .status-complete, .status-shutdown {
+            background-color: rgba(144, 147, 153, 0.15);
+            color: #909399;
         }
 
         .task-node {
             font-size: 11px;
-            color: var(--gray-dark);
+            color: #909399;
             margin-left: 5px;
             min-width: 65px;
         }
 
         .task-created {
             font-size: 11px;
-            color: var(--gray-dark);
+            color: #909399;
             min-width: 120px;
             text-align: right;
         }
 
-        .service-id {
-            font-family: monospace;
-            font-size: 11px;
-            color: var(--gray-dark);
-            margin-top: 2px;
-        }
-
-        .port-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 4px;
-        }
-
-        .port-badge {
-            background-color: rgba(36, 150, 237, 0.1);
-            color: var(--primary);
-            padding: 3px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .volume-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 4px;
-        }
-
-        .volume-badge {
-            background-color: rgba(45, 55, 72, 0.1);
-            color: var(--secondary);
-            padding: 3px 6px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .task-loading {
+        .task-loading, .task-error {
             text-align: center;
             padding: 15px;
-            color: var(--gray-dark);
-            font-size: 13px;
-        }
-
-        .task-error {
-            color: var(--danger);
-            padding: 8px;
-            text-align: center;
+            color: #909399;
             font-size: 13px;
         }
 
@@ -390,11 +236,11 @@
         }
 
         .auth-active {
-            background-color: var(--success);
+            background-color: #67c23a;
         }
 
         .auth-inactive {
-            background-color: var(--gray-dark);
+            background-color: #909399;
         }
 
         .switch-container {
@@ -403,289 +249,30 @@
             margin-bottom: 12px;
         }
 
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 45px;
-            height: 22px;
-            margin-right: 8px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 22px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 14px;
-            width: 14px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--primary);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(23px);
-        }
-
         .health-check-group {
-            background-color: rgba(56, 161, 105, 0.1);
+            background-color: rgba(103, 194, 58, 0.1);
             border-radius: 6px;
             padding: 12px;
             margin-top: 12px;
-            border-left: 4px solid var(--success);
+            border-left: 4px solid #67c23a;
         }
 
         .health-check-group label {
-            color: var(--success);
+            color: #67c23a;
             font-size: 14px;
         }
 
         .health-example {
             font-size: 11px;
-            color: var(--gray-dark);
+            color: #909399;
             margin-top: 4px;
         }
 
         .loading {
             text-align: center;
             padding: 30px;
-            color: var(--gray-dark);
+            color: #909399;
             font-size: 14px;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 480px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-            overflow: hidden;
-        }
-
-        .modal-header {
-            padding: 15px;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 22px;
-            cursor: pointer;
-        }
-
-        .modal-body {
-            padding: 15px;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            color: var(--secondary);
-            font-size: 14px;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--gray);
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(36, 150, 237, 0.2);
-        }
-
-        .port-mapping {
-            background-color: rgba(36, 150, 237, 0.1);
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 12px;
-            border-left: 4px solid var(--primary);
-        }
-
-        .port-fields {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 8px;
-        }
-
-        .port-fields > div {
-            flex: 1;
-        }
-
-        .port-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .port-mappings-list {
-            margin-top: 12px;
-        }
-
-        .port-mapping-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
-            background: white;
-            border-radius: 5px;
-            margin-bottom: 6px;
-            border: 1px solid var(--gray);
-            font-size: 13px;
-        }
-
-        .port-mapping-text {
-            font-size: 13px;
-        }
-
-        .port-mapping-actions {
-            display: flex;
-            gap: 4px;
-        }
-
-        .volume-mapping {
-            background: rgba(45, 55, 72, 0.1);
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            border-left: 4px solid var(--secondary);
-        }
-
-        .volume-fields {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 8px;
-        }
-
-        .volume-fields > div {
-            flex: 1;
-        }
-
-        .volume-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .volume-mappings-list {
-            margin-top: 12px;
-        }
-
-        .volume-mapping-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
-            background: white;
-            border-radius: 5px;
-            margin-bottom: 6px;
-            border: 1px solid var(--gray);
-            font-size: 13px;
-        }
-
-        .volume-mapping-text {
-            font-size: 13px;
-        }
-
-        .volume-mapping-actions {
-            display: flex;
-            gap: 4px;
-        }
-
-        .modal-footer {
-            padding: 15px;
-            background: var(--light);
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .toast {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            padding: 12px 20px;
-            border-radius: 5px;
-            color: white;
-            font-weight: 600;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-            z-index: 1100;
-            transform: translateX(120%);
-            transition: transform 0.3s ease;
-            font-size: 14px;
-        }
-
-        .toast.show {
-            transform: translateX(0);
-        }
-
-        .toast-success {
-            background-color: var(--success);
-        }
-
-        .toast-error {
-            background-color: var(--danger);
         }
 
         .spinner {
@@ -703,6 +290,87 @@
             to { transform: rotate(360deg); }
         }
 
+        .el-collapse-item__content {
+            padding-bottom: 0;
+        }
+
+        .el-card {
+            margin-bottom: 15px;
+        }
+
+        .el-card__header {
+            padding: 12px 15px;
+        }
+
+        .el-card__body {
+            padding: 15px;
+        }
+
+        .el-form-item {
+            margin-bottom: 20px;
+        }
+
+        .el-dialog__body {
+            padding: 20px;
+        }
+
+        .el-dialog__footer {
+            padding: 10px 20px;
+        }
+
+        .port-mapping, .volume-mapping {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .port-mapping {
+            background-color: rgba(64, 158, 255, 0.1);
+            border-left: 4px solid #409EFF;
+        }
+
+        .volume-mapping {
+            background-color: rgba(144, 147, 153, 0.1);
+            border-left: 4px solid #909399;
+        }
+
+        .port-fields, .volume-fields {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .port-actions, .volume-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .port-mappings-list, .volume-mappings-list {
+            margin-top: 15px;
+        }
+
+        .port-mapping-item, .volume-mapping-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            border: 1px solid #ebeef5;
+            font-size: 13px;
+        }
+
+        .port-mapping-text, .volume-mapping-text {
+            font-size: 13px;
+        }
+
+        .port-mapping-actions, .volume-mapping-actions {
+            display: flex;
+            gap: 5px;
+        }
+
         @media (max-width: 768px) {
             .service-header {
                 flex-direction: column;
@@ -716,12 +384,7 @@
                 margin-top: 5px;
             }
 
-            .port-fields {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .volume-fields {
+            .port-fields, .volume-fields {
                 flex-direction: column;
                 gap: 10px;
             }
@@ -754,75 +417,76 @@
     <div id="app">
         <div class="container">
             <header>
-                <h1>Docker Swarm 服务管理</h1>
+                <h1><i class="el-icon-s-promotion"></i> Docker Swarm 服务管理</h1>
                 <div class="header-actions">
                     <div class="auth-status">
                         <span class="auth-status-icon" :class="authToken ? 'auth-active' : 'auth-inactive'"></span>
                         {{ authToken ? '已设置' : '未认证' }}
                     </div>
-                    <button @click="loadServices" class="btn btn-secondary">
-                        刷新服务
-                    </button>
-                    <button @click="showCreateModal = true" class="btn btn-primary">
-                        创建服务
-                    </button>
-                    <button @click="showAuthModal = true" class="btn btn-warning">
-                        认证设置
-                    </button>
+                    <el-button type="primary" plain @click="loadServices">
+                        <i class="el-icon-refresh"></i> 刷新服务
+                    </el-button>
+                    <el-button type="success" @click="showCreateModal = true">
+                        <i class="el-icon-circle-plus"></i> 创建服务
+                    </el-button>
+                    <el-button type="warning" @click="showAuthModal = true">
+                        <i class="el-icon-lock"></i> 认证设置
+                    </el-button>
                 </div>
             </header>
 
             <main>
                 <div class="service-list">
-                    <div v-if="loading" class="loading">
+                    <el-card v-if="loading" class="loading">
                         <p><span class="spinner"></span> 正在加载服务列表...</p>
-                    </div>
+                    </el-card>
 
-                    <div v-else-if="services.length === 0" class="service-item">
-                        <p>没有运行中的服务</p>
-                    </div>
+                    <el-card v-else-if="services.length === 0">
+                        <div class="service-item">
+                            <p>没有运行中的服务</p>
+                        </div>
+                    </el-card>
 
-                    <div v-else>
-                        <div v-for="service in services" :key="service.ID" class="service-item">
-                            <div class="service-header" @click="toggleServiceDetails(service.ID)">
-                                <div class="service-info">
-                                    <div class="service-name-row">
-                                        <div class="service-name">{{ service.Spec.Name }}</div>
-                                        <div class="service-image">{{ getImage(service) }}</div>
+                    <el-collapse v-else v-model="expandedServices" accordion>
+                        <el-collapse-item v-for="service in services" :key="service.ID" :name="service.ID">
+                            <template slot="title">
+                                <div class="service-header">
+                                    <div class="service-info">
+                                        <div class="service-name-row">
+                                            <div class="service-name">{{ service.Spec.Name }}</div>
+                                            <div class="service-image">{{ getImage(service) }}</div>
+                                        </div>
+                                        <div class="service-meta">
+                                            <span>副本: {{getReplicasStatusRuning(service)}}/{{ getReplicasStatus(service) }}</span>
+                                            <span>{{ formatDate(service.CreatedAt) }}</span>
+                                        </div>
+                                        <div class="service-id">ID: {{ service.ID }}</div>
+                                        <div v-if="getPortInfo(service)" class="port-info">
+                                            <el-tag v-for="(port, index) in getPortInfo(service).split(', ')" :key="index" size="small" type="info">
+                                                {{ port }}
+                                            </el-tag>
+                                        </div>
+                                        <div v-if="getVolumeInfo(service)" class="volume-info">
+                                            <el-tag v-for="(volume, index) in getVolumeInfo(service).split(', ')" :key="index" size="small" type="info">
+                                                {{ volume }}
+                                            </el-tag>
+                                        </div>
                                     </div>
-                                    <div class="service-meta">
-                                        <span>副本: {{getReplicasStatusRuning(service)}}/{{ getReplicasStatus(service) }}</span>
-                                        <span>{{ formatDate(service.CreatedAt) }}</span>
-                                    </div>
-                                    <div class="service-id">ID: {{ service.ID.substring(0, 12) }}...</div>
-                                    <div v-if="getPortInfo(service)" class="port-info">
-                                        <span v-for="(port, index) in getPortInfo(service).split(', ')" :key="index" class="port-badge">
-                                            {{ port }}
-                                        </span>
-                                    </div>
-                                    <div v-if="getVolumeInfo(service)" class="volume-info">
-                                        <span v-for="(volume, index) in getVolumeInfo(service).split(', ')" :key="index" class="volume-badge">
-                                            {{ volume }}
-                                        </span>
+                                    <div class="service-actions">
+                                        <el-button size="mini" type="warning" icon="el-icon-sort" circle
+                                            title="伸缩副本" @click.stop="openScaleModal(service)"></el-button>
+                                        <el-button size="mini" type="success" icon="el-icon-refresh" circle
+                                            title="更新镜像" @click.stop="openUpdateModal(service)"></el-button>
+                                        <el-button size="mini" type="danger" icon="el-icon-delete" circle
+                                            title="删除服务" @click.stop="openDeleteModal(service)"></el-button>
                                     </div>
                                 </div>
-                                <div class="service-actions">
-                                    <button class="action-btn scale-btn" title="伸缩副本" @click.stop="openScaleModal(service)">
-                                        缩
-                                    </button>
-                                    <button class="action-btn update-btn" title="更新镜像" @click.stop="openUpdateModal(service)">
-                                        镜
-                                    </button>
-                                    <button class="action-btn delete-btn" title="删除服务" @click.stop="openDeleteModal(service)">
-                                        删
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="service-details" :class="{ active: expandedServices.includes(service.ID) }">
+                            </template>
+                            <div>
                                 <div class="tasks-title">
                                     <span>任务列表</span>
                                     <button class="refresh-tasks-btn" @click.stop="loadTasks(service.ID)">
-                                        刷新任务
+                                        <i class="el-icon-refresh"></i> 刷新任务
                                     </button>
                                 </div>
 
@@ -850,218 +514,163 @@
                                 </ul>
 
                                 <div v-else class="task-loading">
-                                    <p>该服务没有任务</p>
+                                    <p style="cursor: pointer;" @click.stop="loadTasks(service.ID)">
+                                        <i class="el-icon-refresh"></i> 刷新任务
+                                    </p>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </el-collapse-item>
+                    </el-collapse>
                 </div>
             </main>
         </div>
 
         <!-- 创建服务模态框 -->
-        <div class="modal" :class="{ active: showCreateModal }">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">创建新服务</h2>
-                    <button class="close-btn" @click="showCreateModal = false">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="service-name">服务名称</label>
-                        <input type="text" id="service-name" v-model="newService.name" placeholder="输入服务名称">
-                    </div>
-                    <div class="form-group">
-                        <label for="service-image">镜像名称</label>
-                        <input type="text" id="service-image" v-model="newService.image" placeholder="例如: nginx:latest">
-                    </div>
-                    <div class="form-group">
-                        <label for="service-replicas">副本数量</label>
-                        <input type="number" id="service-replicas" v-model.number="newService.replicas" min="1" value="1">
-                    </div>
+        <el-dialog title="创建新服务" :visible.sync="showCreateModal" width="90%">
+            <el-form label-width="100px">
+                <el-form-item label="服务名称">
+                    <el-input v-model="newService.name" placeholder="输入服务名称"></el-input>
+                </el-form-item>
+                <el-form-item label="镜像名称">
+                    <el-input v-model="newService.image" placeholder="例如: nginx:latest"></el-input>
+                </el-form-item>
+                <el-form-item label="副本数量">
+                    <el-input-number v-model="newService.replicas" :min="1" label="副本数量"></el-input-number>
+                </el-form-item>
 
-                    <div class="form-group">
-                        <label>端口映射</label>
-                        <div class="port-mapping">
-                            <div class="port-fields">
-                                <div>
-                                    <label for="host-port">主机端口</label>
-                                    <input type="number" id="host-port" v-model.number="newPort.hostPort" min="1" max="65535" placeholder="例如: 8080">
-                                </div>
-                                <div>
-                                    <label for="container-port">容器端口</label>
-                                    <input type="number" id="container-port" v-model.number="newPort.containerPort" min="1" max="65535" placeholder="例如: 80">
-                                </div>
-                            </div>
-                            <div class="port-actions">
-                                <button class="btn btn-primary btn-sm" @click="addPortMapping">添加端口映射</button>
-                            </div>
+                <el-form-item label="端口映射">
+                    <div class="port-mapping">
+                        <div class="port-fields">
+                            <el-form-item label="主机端口" label-width="80px">
+                                <el-input-number v-model="newPort.hostPort" :min="1" :max="65535" placeholder="例如: 8080"></el-input-number>
+                            </el-form-item>
+                            <el-form-item label="容器端口" label-width="80px">
+                                <el-input-number v-model="newPort.containerPort" :min="1" :max="65535" placeholder="例如: 80"></el-input-number>
+                            </el-form-item>
                         </div>
-
-                        <div class="port-mappings-list" v-if="newService.ports.length > 0">
-                            <div v-for="(port, index) in newService.ports" :key="index" class="port-mapping-item">
-                                <div class="port-mapping-text">
-                                    {{ port.hostPort }} → {{ port.containerPort }}
-                                </div>
-                                <div class="port-mapping-actions">
-                                    <button class="btn btn-danger btn-sm" @click="removePortMapping(index)">删除</button>
-                                </div>
-                            </div>
+                        <div class="port-actions">
+                            <el-button type="primary" size="small" @click="addPortMapping">添加端口映射</el-button>
                         </div>
                     </div>
 
-                    <!-- 目录绑定开关 -->
-                    <div class="form-group">
-                        <div class="switch-container">
-                            <label class="switch">
-                                <input type="checkbox" v-model="newService.volumeBindingsEnabled">
-                                <span class="slider"></span>
-                            </label>
-                            <span>启用目录绑定</span>
-                        </div>
-
-                        <!-- 目录绑定输入区域 -->
-                        <div v-if="newService.volumeBindingsEnabled" class="volume-mapping">
-                            <div class="volume-fields">
-                                <div>
-                                    <label for="host-path">主机路径</label>
-                                    <input type="text" id="host-path" v-model="newVolume.hostPath" placeholder="例如: /home/user/data">
-                                </div>
-                                <div>
-                                    <label for="container-path">容器路径</label>
-                                    <input type="text" id="container-path" v-model="newVolume.containerPath" placeholder="例如: /app/data">
-                                </div>
+                    <div class="port-mappings-list" v-if="newService.ports.length > 0">
+                        <div v-for="(port, index) in newService.ports" :key="index" class="port-mapping-item">
+                            <div class="port-mapping-text">
+                                {{ port.hostPort }} → {{ port.containerPort }}
                             </div>
-                            <div class="volume-actions">
-                                <button class="btn btn-primary btn-sm" @click="addVolumeBinding">添加目录绑定</button>
-                            </div>
-                        </div>
-
-                        <div class="volume-mappings-list" v-if="newService.volumes.length > 0">
-                            <div v-for="(volume, index) in newService.volumes" :key="index" class="volume-mapping-item">
-                                <div class="volume-mapping-text">
-                                    {{ volume.hostPath }} → {{ volume.containerPath }}
-                                </div>
-                                <div class="volume-mapping-actions">
-                                    <button class="btn btn-danger btn-sm" @click="removeVolumeBinding(index)">删除</button>
-                                </div>
+                            <div class="port-mapping-actions">
+                                <el-button type="danger" size="mini" @click="removePortMapping(index)">删除</el-button>
                             </div>
                         </div>
                     </div>
+                </el-form-item>
 
-                    <!-- 健康检查开关 -->
-                    <div class="form-group">
-                        <div class="switch-container">
-                            <label class="switch">
-                                <input type="checkbox" v-model="newService.healthCheckEnabled">
-                                <span class="slider"></span>
-                            </label>
-                            <span>启用健康检查</span>
+                <!-- 目录绑定开关 -->
+                <el-form-item label="目录绑定">
+                    <el-switch v-model="newService.volumeBindingsEnabled" active-text="启用目录绑定"></el-switch>
+                </el-form-item>
+
+                <!-- 目录绑定输入区域 -->
+                <el-form-item v-if="newService.volumeBindingsEnabled">
+                    <div class="volume-mapping">
+                        <div class="volume-fields">
+                            <el-form-item label="主机路径" label-width="80px">
+                                <el-input v-model="newVolume.hostPath" placeholder="例如: /home/user/data"></el-input>
+                            </el-form-item>
+                            <el-form-item label="容器路径" label-width="80px">
+                                <el-input v-model="newVolume.containerPath" placeholder="例如: /app/data"></el-input>
+                            </el-form-item>
                         </div>
+                        <div class="volume-actions">
+                            <el-button type="primary" size="small" @click="addVolumeBinding">添加目录绑定</el-button>
+                        </div>
+                    </div>
 
-                        <div v-if="newService.healthCheckEnabled" class="health-check-group">
-                            <label for="health-cmd">健康检查命令(容器内,curl)</label>
-                            <input type="text" id="health-cmd" v-model="newService.healthCheckCommand" placeholder="例如: curl --fail http://localhost:80/ || exit 1">
-                            <div class="health-example">
-                                示例: curl --fail http://localhost:80/ || exit 1
+                    <div class="volume-mappings-list" v-if="newService.volumes.length > 0">
+                        <div v-for="(volume, index) in newService.volumes" :key="index" class="volume-mapping-item">
+                            <div class="volume-mapping-text">
+                                {{ volume.hostPath }} → {{ volume.containerPath }}
+                            </div>
+                            <div class="volume-mapping-actions">
+                                <el-button type="danger" size="mini" @click="removeVolumeBinding(index)">删除</el-button>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @click="showCreateModal = false">取消</button>
-                    <button class="btn btn-primary" @click="createService">创建服务</button>
-                </div>
+                </el-form-item>
+
+                <!-- 健康检查开关 -->
+                <el-form-item label="健康检查">
+                    <el-switch v-model="newService.healthCheckEnabled" active-text="启用健康检查"></el-switch>
+                </el-form-item>
+
+                <el-form-item v-if="newService.healthCheckEnabled">
+                    <div class="health-check-group">
+                        <el-form-item label="健康检查命令">
+                            <el-input v-model="newService.healthCheckCommand" placeholder="例如: curl --fail http://localhost:80/ || exit 1"></el-input>
+                        </el-form-item>
+                        <div class="health-example">
+                            示例: curl --fail http://localhost:80/ || exit 1
+                        </div>
+                    </div>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="showCreateModal = false">取 消</el-button>
+                <el-button type="primary" @click="createService">创 建</el-button>
             </div>
-        </div>
+        </el-dialog>
 
         <!-- 伸缩副本模态框 -->
-        <div class="modal" :class="{ active: showScaleModal }">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">伸缩服务副本</h2>
-                    <button class="close-btn" @click="showScaleModal = false">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="scale-count">副本数量</label>
-                        <input type="number" id="scale-count" v-model.number="scaleCount" min="0" value="1">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @click="showScaleModal = false">取消</button>
-                    <button class="btn btn-primary" @click="scaleService">确认伸缩</button>
-                </div>
+        <el-dialog title="伸缩服务副本" :visible.sync="showScaleModal" width="90%">
+            <el-form label-width="80px">
+                <el-form-item label="副本数量">
+                    <el-input-number v-model="scaleCount" :min="0" label="副本数量"></el-input-number>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="showScaleModal = false">取 消</el-button>
+                <el-button type="primary" @click="scaleService">确 定</el-button>
             </div>
-        </div>
+        </el-dialog>
 
         <!-- 更新镜像模态框 -->
-        <div class="modal" :class="{ active: showUpdateModal }">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">更新服务镜像</h2>
-                    <button class="close-btn" @click="showUpdateModal = false">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="new-image">新镜像版本</label>
-                        <input type="text" id="new-image" v-model="newImage" placeholder="例如: nginx:1.23">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @click="showUpdateModal = false">取消</button>
-                    <button class="btn btn-primary" @click="updateServiceImage">更新镜像</button>
-                </div>
+        <el-dialog title="更新服务镜像" :visible.sync="showUpdateModal" width="90%">
+            <el-form label-width="80px">
+                <el-form-item label="新镜像">
+                    <el-input v-model="newImage" placeholder="例如: nginx:1.23"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="showUpdateModal = false">取 消</el-button>
+                <el-button type="primary" @click="updateServiceImage">更 新</el-button>
             </div>
-        </div>
+        </el-dialog>
 
         <!-- 删除服务确认模态框 -->
-        <div class="modal" :class="{ active: showDeleteModal }">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">删除服务</h2>
-                    <button class="close-btn" @click="showDeleteModal = false">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p>确定要删除服务 <strong>{{ serviceToDeleteName }}</strong> 吗？此操作不可逆。</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @click="showDeleteModal = false">取消</button>
-                    <button class="btn btn-danger" @click="deleteService">确认删除</button>
-                </div>
+        <el-dialog title="删除服务" :visible.sync="showDeleteModal" width="90%">
+            <p>确定要删除服务 <strong>{{ serviceToDeleteName }}</strong> 吗？此操作不可逆。</p>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="showDeleteModal = false">取 消</el-button>
+                <el-button type="danger" @click="deleteService">删 除</el-button>
             </div>
-        </div>
+        </el-dialog>
 
         <!-- 认证设置模态框 -->
-        <div class="modal" :class="{ active: showAuthModal }">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">认证设置</h2>
-                    <button class="close-btn" @click="showAuthModal = false">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="auth-token">Authorization Token</label>
-                        <input type="password" id="auth-token" v-model="authTokenInput" placeholder="输入认证令牌">
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" v-model="showToken"> 显示令牌
-                        </label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-danger" @click="clearAuthToken">清除令牌</button>
-                    <button class="btn btn-secondary" @click="showAuthModal = false">取消</button>
-                    <button class="btn btn-primary" @click="saveAuthToken">保存</button>
-                </div>
+        <el-dialog title="认证设置" :visible.sync="showAuthModal" width="90%">
+            <el-form label-width="120px">
+                <el-form-item label="Authorization Token">
+                    <el-input v-model="authTokenInput" :type="showToken ? 'text' : 'password'" placeholder="输入认证令牌"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-checkbox v-model="showToken">显示令牌</el-checkbox>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button type="danger" @click="clearAuthToken">清除令牌</el-button>
+                <el-button @click="showAuthModal = false">取 消</el-button>
+                <el-button type="primary" @click="saveAuthToken">保 存</el-button>
             </div>
-        </div>
-
-        <!-- 通知Toast -->
-        <div class="toast" :class="['show', toastClass]" v-if="toastMessage">
-            {{ toastMessage }}
-        </div>
+        </el-dialog>
     </div>
 
     <script>
@@ -1162,9 +771,9 @@
                         this.tasksError = {};
                     } catch (error) {
                         if (error.response && error.response.status === 401) {
-                            this.showError('认证失败，请检查令牌');
+                            this.$message.error('认证失败，请检查令牌');
                         } else {
-                            this.showError(error.message || '加载服务列表失败');
+                            this.$message.error(error.message || '加载服务列表失败');
                         }
                     } finally {
                         this.loading = false;
@@ -1296,7 +905,7 @@
                 // 添加端口映射
                 addPortMapping() {
                     if (!this.newPort.hostPort || !this.newPort.containerPort) {
-                        this.showError('主机端口和容器端口都必须填写');
+                        this.$message.error('主机端口和容器端口都必须填写');
                         return;
                     }
 
@@ -1307,7 +916,7 @@
                     );
 
                     if (exists) {
-                        this.showError('该端口映射已存在');
+                        this.$message.error('该端口映射已存在');
                         return;
                     }
 
@@ -1329,7 +938,7 @@
                 // 添加目录绑定
                 addVolumeBinding() {
                     if (!this.newVolume.hostPath || !this.newVolume.containerPath) {
-                        this.showError('主机路径和容器路径都必须填写');
+                        this.$message.error('主机路径和容器路径都必须填写');
                         return;
                     }
 
@@ -1340,7 +949,7 @@
                     );
 
                     if (exists) {
-                        this.showError('该目录绑定已存在');
+                        this.$message.error('该目录绑定已存在');
                         return;
                     }
 
@@ -1361,7 +970,7 @@
 
                 async createService() {
                     if (!this.newService.name || !this.newService.image) {
-                        this.showError('服务名称和镜像是必填项');
+                        this.$message.error('服务名称和镜像是必填项');
                         return;
                     }
 
@@ -1395,15 +1004,15 @@
                             }
                         });
 
-                        this.showSuccess('服务创建成功');
+                        this.$message.success('服务创建成功');
                         this.showCreateModal = false;
                         this.resetNewServiceForm();
                         this.loadServices();
                     } catch (error) {
                         if (error.response && error.response.status === 401) {
-                            this.showError('认证失败，请检查令牌');
+                            this.$message.error('认证失败，请检查令牌');
                         } else {
-                            this.showError('创建服务失败: ' + (error.response?.data?.message || error.message));
+                            this.$message.error('创建服务失败: ' + (error.response?.data?.message || error.message));
                         }
                     }
                 },
@@ -1431,7 +1040,7 @@
 
                 async scaleService() {
                     if (isNaN(this.scaleCount) || this.scaleCount < 0) {
-                        this.showError('副本数量必须是非负整数');
+                        this.$message.error('副本数量必须是非负整数');
                         return;
                     }
 
@@ -1440,7 +1049,7 @@
                             replicas: this.scaleCount,
                             id: this.currentService.ID
                         });
-                        this.showSuccess('服务伸缩成功');
+                        this.$message.success('服务伸缩成功');
                         this.showScaleModal = false;
 
                         // 刷新受影响服务的任务
@@ -1451,16 +1060,16 @@
                         this.loadServices();
                     } catch (error) {
                         if (error.response && error.response.status === 401) {
-                            this.showError('认证失败，请检查令牌');
+                            this.$message.error('认证失败，请检查令牌');
                         } else {
-                            this.showError('服务伸缩失败');
+                            this.$message.error('服务伸缩失败');
                         }
                     }
                 },
 
                 async updateServiceImage() {
                     if (!this.newImage) {
-                        this.showError('镜像名称不能为空');
+                        this.$message.error('镜像名称不能为空');
                         return;
                     }
 
@@ -1469,7 +1078,7 @@
                             image: this.newImage,
                             id: this.currentService.ID
                         });
-                        this.showSuccess('镜像更新成功');
+                        this.$message.success('镜像更新成功');
                         this.showUpdateModal = false;
 
                         // 刷新受影响服务的任务
@@ -1480,9 +1089,9 @@
                         this.loadServices();
                     } catch (error) {
                         if (error.response && error.response.status === 401) {
-                            this.showError('认证失败，请检查令牌');
+                            this.$message.error('认证失败，请检查令牌');
                         } else {
-                            this.showError('镜像更新失败');
+                            this.$message.error('镜像更新失败');
                         }
                     }
                 },
@@ -1492,7 +1101,7 @@
                         await axios.post(`${this.API_BASE_URL}/serviceDelete`, {
                             id: this.currentService.ID
                         });
-                        this.showSuccess('服务删除成功');
+                        this.$message.success('服务删除成功');
                         this.showDeleteModal = false;
 
                         // 从任务列表中移除已删除的服务
@@ -1503,9 +1112,9 @@
                         this.loadServices();
                     } catch (error) {
                         if (error.response && error.response.status === 401) {
-                            this.showError('认证失败，请检查令牌');
+                            this.$message.error('认证失败，请检查令牌');
                         } else {
-                            this.showError('服务删除失败');
+                            this.$message.error('服务删除失败');
                         }
                     }
                 },
@@ -1513,44 +1122,20 @@
                 saveAuthToken() {
                     if (this.authTokenInput) {
                         localStorage.setItem('authToken', this.authTokenInput);
-                        this.showSuccess('认证令牌已保存');
+                        this.$message.success('认证令牌已保存');
                         this.showAuthModal = false;
                         this.loadServices(); // 重新加载服务
                     } else {
-                        this.showError('请输入认证令牌');
+                        this.$message.error('请输入认证令牌');
                     }
                 },
 
                 clearAuthToken() {
                     localStorage.removeItem('authToken');
                     this.authTokenInput = '';
-                    this.showSuccess('认证令牌已清除');
+                    this.$message.success('认证令牌已清除');
                     this.showAuthModal = false;
                     this.loadServices(); // 重新加载服务
-                },
-
-                showSuccess(message) {
-                    this.showToast(message, 'toast-success');
-                },
-
-                showError(message) {
-                    this.showToast(message, 'toast-error');
-                },
-
-                showToast(message, type) {
-                    // 清除之前的定时器
-                    if (this.toastTimer) {
-                        clearTimeout(this.toastTimer);
-                    }
-
-                    this.toastMessage = message;
-                    this.toastClass = type;
-
-                    // 3秒后隐藏toast
-                    this.toastTimer = setTimeout(() => {
-                        this.toastMessage = '';
-                        this.toastClass = '';
-                    }, 3000);
                 }
             }
         });

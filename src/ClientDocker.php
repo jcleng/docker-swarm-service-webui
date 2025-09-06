@@ -175,13 +175,13 @@ class ClientDocker
     {
         $ports = $params['ports'] ?? [];
         $service = [
-            "Name" => $service_name,
+            "Name" => trim($service_name),
             "TaskTemplate" => [
                 "Labels" => [
                     "create_with" => "docker-swarm-service-webui"
                 ],
                 "ContainerSpec" => [
-                    "Image" => $image,
+                    "Image" => trim($image),
                     "Mounts" => (function () use ($params) {
                         if (empty($params['volumes'])) {
                             return [];
@@ -252,7 +252,7 @@ class ClientDocker
             ]
         ];
         $response = $this->client->post("/services/create", [
-            'json' => $this->removeEmptyKeys($service)
+            'json' => $this->removeEmptyKeys($service),
         ]);
         // $update_res = json_decode($response->getBody(), true);
         return true;
@@ -267,6 +267,30 @@ class ClientDocker
     public function serviceDelete($service_name)
     {
         $response = $this->client->delete("/services/$service_name");
+        return true;
+    }
+    /**
+     * 用户登录主节点
+     *
+     * @param string $username
+     * @param string $password
+     * @param string $serveraddress
+     * @return void
+     * @author jcleng
+     */
+    public function login($username, $password, $serveraddress)
+    {
+        $response = $this->client->post("/auth", [
+            'json' => [
+                "username" => $username,
+                "password" => $password,
+                "serveraddress" => $serveraddress,
+            ],
+        ]);
+        $res = json_decode($response->getBody(), true);
+        if (($res['Status'] ?? '') !== 'Login Succeeded') {
+            throw new \Exception($response->getBody());
+        }
         return true;
     }
 }
