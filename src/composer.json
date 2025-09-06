@@ -2,6 +2,7 @@
     "require": {
         "clue/docker-react": "^1.5",
         "react/async": "^4.3",
-        "guzzlehttp/guzzle": "^7.10"
+        "guzzlehttp/guzzle": "^7.10",
+        "topthink/think-orm": "^4.0"
     }
 }

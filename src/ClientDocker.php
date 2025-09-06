@@ -1,6 +1,7 @@
 <?php
 
 use \GuzzleHttp\Client;
+use think\facade\Db;
 
 class ClientDocker
 {
@@ -175,13 +176,13 @@ class ClientDocker
     {
         $ports = $params['ports'] ?? [];
         $service = [
-            "Name" => $service_name,
+            "Name" => trim($service_name),
             "TaskTemplate" => [
                 "Labels" => [
                     "create_with" => "docker-swarm-service-webui"
                 ],
                 "ContainerSpec" => [
-                    "Image" => $image,
+                    "Image" => trim($image),
                     "Mounts" => (function () use ($params) {
                         if (empty($params['volumes'])) {
                             return [];
@@ -251,9 +252,18 @@ class ClientDocker
                 "Order" => "start-first"
             ]
         ];
-        $response = $this->client->post("/services/create", [
-            'json' => $this->removeEmptyKeys($service)
-        ]);
+        $options = [
+            'json' => $this->removeEmptyKeys($service),
+        ];
+        if (!empty($params['imagePrivateId'])) {
+            $login_info = Db::table('login')->where('id', $params['imagePrivateId'])
+                ->findOrFail();
+            $options['headers'] = [
+                // 私有镜像凭证, 源json数据不能有换行和空格: https://docs.docker.com/reference/api/engine/version/v1.50/#section/Authentication
+                'X-Registry-Auth' => base64_encode(json_encode($login_info))
+            ];
+        }
+        $response = $this->client->post("/services/create", $options);
         // $update_res = json_decode($response->getBody(), true);
         return true;
     }
@@ -267,6 +277,30 @@ class ClientDocker
     public function serviceDelete($service_name)
     {
         $response = $this->client->delete("/services/$service_name");
+        return true;
+    }
+    /**
+     * 用户登录主节点
+     *
+     * @param string $username
+     * @param string $password
+     * @param string $serveraddress
+     * @return void
+     * @author jcleng
+     */
+    public function login($username, $password, $serveraddress)
+    {
+        $response = $this->client->post("/auth", [
+            'json' => [
+                "username" => $username,
+                "password" => $password,
+                "serveraddress" => $serveraddress,
+            ],
+        ]);
+        $res = json_decode($response->getBody(), true);
+        if (($res['Status'] ?? '') !== 'Login Succeeded') {
+            throw new \Exception($response->getBody());
+        }
         return true;
     }
 }
