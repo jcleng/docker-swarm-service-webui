@@ -62,6 +62,20 @@ if (!empty($_GET['action'])) {
                 ]);
                 return;
                 break;
+            case '/login':
+                $res = $docker->login($params['username'], $params['password'], $params['serveraddress']);
+                if ($res) {
+                    Db::table('login')->insert([
+                        'username' => $params['username'],
+                        'password' => $params['password'],
+                        'email' => $params['email'],
+                        'serveraddress' => $params['serveraddress'],
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+                echo json_encode($res);
+                return;
+                break;
             default:
                 # code...
                 break;

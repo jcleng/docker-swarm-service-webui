@@ -429,6 +429,9 @@
                     <el-button type="success" @click="showCreateModal = true">
                         <i class="el-icon-circle-plus"></i> 创建服务
                     </el-button>
+                    <el-button type="danger" @click="showImageLoginModal = true">
+                        <i class="el-icon-lock"></i> 私有镜像
+                    </el-button>
                     <el-button type="warning" @click="showAuthModal = true">
                         <i class="el-icon-lock"></i> 认证设置
                     </el-button>
@@ -671,6 +674,27 @@
                 <el-button type="primary" @click="saveAuthToken">保 存</el-button>
             </div>
         </el-dialog>
+        <!-- 私有镜像模态框 -->
+        <el-dialog title="私有镜像" :visible.sync="showImageLoginModal" width="90%">
+            <el-form label-width="120px">
+                <el-form-item label="登录用户名">
+                    <el-input v-model="showImageLoginModalData.username" placeholder="输入登录用户名, 通常是邮箱"></el-input>
+                </el-form-item>
+                <el-form-item label="登录密码">
+                    <el-input v-model="showImageLoginModalData.password" type="password" placeholder="输入登录密码"></el-input>
+                </el-form-item>
+                <el-form-item label="邮箱">
+                    <el-input v-model="showImageLoginModalData.email" placeholder="输入邮箱"></el-input>
+                </el-form-item>
+                <el-form-item label="仓库地址">
+                    <el-input v-model="showImageLoginModalData.serveraddress" placeholder="不带协议"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="showImageLoginModal = false">取 消</el-button>
+                <el-button type="primary" @click="saveImageLoginModalData">保 存</el-button>
+            </div>
+        </el-dialog>
     </div>
 
     <script>
@@ -699,6 +723,13 @@
                 showUpdateModal: false,
                 showDeleteModal: false,
                 showAuthModal: false,
+                showImageLoginModalData: {
+                    username: '',
+                    password: '',
+                    email: '',
+                    serveraddress: '',
+                },
+                showImageLoginModal: false,
                 currentService: null,
                 serviceToDeleteName: '',
                 newService: {
@@ -1058,6 +1089,21 @@
                         }
 
                         this.loadServices();
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            this.$message.error('认证失败，请检查令牌');
+                        } else {
+                            this.$message.error('服务伸缩失败');
+                        }
+                    }
+                },
+                async saveImageLoginModalData() {
+                    try {
+                        await axios.post(`${this.API_BASE_URL}/login`, {
+                            ...this.showImageLoginModalData
+                        });
+                        this.$message.success('登录成功');
+                        this.showImageLoginModal = false;
                     } catch (error) {
                         if (error.response && error.response.status === 401) {
                             this.$message.error('认证失败，请检查令牌');
