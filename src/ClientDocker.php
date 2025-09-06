@@ -1,6 +1,7 @@
 <?php
 
 use \GuzzleHttp\Client;
+use think\facade\Db;
 
 class ClientDocker
 {
@@ -251,9 +252,18 @@ class ClientDocker
                 "Order" => "start-first"
             ]
         ];
-        $response = $this->client->post("/services/create", [
+        $options = [
             'json' => $this->removeEmptyKeys($service),
-        ]);
+        ];
+        if (!empty($params['imagePrivateId'])) {
+            $login_info = Db::table('login')->where('id', $params['imagePrivateId'])
+                ->findOrFail();
+            $options['headers'] = [
+                // 私有镜像凭证, 源json数据不能有换行和空格: https://docs.docker.com/reference/api/engine/version/v1.50/#section/Authentication
+                'X-Registry-Auth' => base64_encode(json_encode($login_info))
+            ];
+        }
+        $response = $this->client->post("/services/create", $options);
         // $update_res = json_decode($response->getBody(), true);
         return true;
     }

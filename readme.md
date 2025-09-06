@@ -17,7 +17,7 @@
 - 初始化`swarm`模式
 
 ```shell
-# 使用公网.内网地址初始化swarm模式
+# 使用云服务商提供的内网地址初始化swarm模式
 docker swarm init --advertise-addr 114.xx.xx.114
 ```
 
@@ -40,6 +40,9 @@ docker run -itd \
 
 ```
 http://127.0.0.1:8087/index.html
+
+# 查看当前节点, 其他工作节点可以加入
+docker swarm join-token worker
 ```
 
 - 开发-构建

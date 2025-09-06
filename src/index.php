@@ -58,7 +58,7 @@ if (!empty($_GET['action'])) {
                 break;
             case '/login_list':
                 echo json_encode([
-                    'data' => Db::table('login')->select()
+                    'data' => Db::table('login')->field("id, username, email, serveraddress")->select()
                 ]);
                 return;
                 break;

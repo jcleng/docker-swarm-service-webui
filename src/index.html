@@ -537,6 +537,23 @@
                 <el-form-item label="镜像名称">
                     <el-input v-model="newService.image" placeholder="例如: nginx:latest"></el-input>
                 </el-form-item>
+                <el-form-item label="私有镜像">
+                    <el-switch @change="getAccountList"  v-model="newService.imagePrivateEnabled" active-text="选择授权帐户"></el-switch>
+                </el-form-item>
+                <el-form-item v-if="newService.imagePrivateEnabled">
+                    <div class="health-check-group">
+                        <el-form-item label="选择用户">
+                            <el-select style="width: 100%;" v-model="newService.imagePrivateId" placeholder="请选择">
+                                <el-option
+                                  v-for="item in accountList"
+                                  :key="item.id"
+                                  :label="'仓库地址:' + item.serveraddress + ' 账户:' + item.username"
+                                  :value="item.id">
+                                </el-option>
+                              </el-select>
+                        </el-form-item>
+                    </div>
+                </el-form-item>
                 <el-form-item label="副本数量">
                     <el-input-number v-model="newService.replicas" :min="1" label="副本数量"></el-input-number>
                 </el-form-item>
@@ -732,12 +749,15 @@
                 showImageLoginModal: false,
                 currentService: null,
                 serviceToDeleteName: '',
+                accountList: [], // 镜像登录列表
                 newService: {
                     name: '',
                     image: '',
                     replicas: 1,
                     ports: [], // 存储多个端口映射
                     volumeBindingsEnabled: false, // 目录绑定开关
+                    imagePrivateEnabled: false, // 开启私有镜像
+                    imagePrivateId: "", // 开启私有镜像登录ID
                     volumes: [], // 存储多个目录绑定
                     healthCheckEnabled: false, // 健康检查开关
                     healthCheckCommand: '' // 健康检查命令
@@ -1027,7 +1047,12 @@
                     if (this.newService.healthCheckEnabled && this.newService.healthCheckCommand) {
                         formData.append('healthCheckCommand', this.newService.healthCheckCommand);
                     }
-
+                    //
+                    if (this.newService.imagePrivateEnabled) {
+                        formData.append('imagePrivateId', this.newService.imagePrivateId);
+                    } else {
+                        this.newService.imagePrivateId = "";
+                    }
                     try {
                         await axios.post(`${this.API_BASE_URL}/serviceCreate`, formData, {
                             headers: {
@@ -1111,6 +1136,11 @@
                             this.$message.error('服务伸缩失败');
                         }
                     }
+                },
+                // 获取授权的帐户列表
+                async getAccountList() {
+                    const res = await axios.get(`${this.API_BASE_URL}/login_list`);
+                    this.accountList = res?.data?.data || [];
                 },
 
                 async updateServiceImage() {
