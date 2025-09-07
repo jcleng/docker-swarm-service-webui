@@ -867,7 +867,7 @@
                 getReplicasStatusRuning(service) {
                     const serviceId = service?.ID;
                     if (!this.tasks[serviceId]) return '?';
-                    return this.tasks[serviceId].filter(task => task.Status.State === 'running').length;
+                    return this.tasks[serviceId].filter(task => task.DesiredState === 'running').length;
                 },
 
                 getPortInfo(service) {
