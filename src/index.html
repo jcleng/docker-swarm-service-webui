@@ -1140,7 +1140,7 @@
                     try {
                         await axios.post(`${this.API_BASE_URL}/scale`, {
                             replicas: this.scaleCount,
-                            imagePrivateId: this.newImagePrivateId,
+                            imagePrivateId: this.imagePrivateEnabled ? this.newImagePrivateId : null,
                             id: this.currentService.ID
                         });
                         this.$message.success('服务伸缩成功');
@@ -1190,7 +1190,7 @@
                     try {
                         await axios.post(`${this.API_BASE_URL}/updateImage`, {
                             image: this.newImage,
-                            imagePrivateId: this.newImagePrivateId,
+                            imagePrivateId: this.imagePrivateEnabled ? this.newImagePrivateId : null,
                             id: this.currentService.ID
                         });
                         this.$message.success('镜像更新成功');
