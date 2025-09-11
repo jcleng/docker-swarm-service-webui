@@ -643,6 +643,23 @@
         <!-- 伸缩副本模态框 -->
         <el-dialog title="伸缩服务副本" :visible.sync="showScaleModal" width="90%">
             <el-form label-width="80px">
+                <el-form-item label-width="80px" label="私有镜像">
+                    <el-switch @change="getAccountList"  v-model="imagePrivateEnabled" active-text="选择授权帐户"></el-switch>
+                </el-form-item>
+                <el-form-item v-if="imagePrivateEnabled">
+                    <div class="health-check-group">
+                        <el-form-item label="选择用户">
+                            <el-select style="width: 100%;" v-model="newImagePrivateId" placeholder="请选择">
+                                <el-option
+                                  v-for="item in accountList"
+                                  :key="item.id"
+                                  :label="'仓库地址:' + item.serveraddress + ' 账户:' + item.username"
+                                  :value="item.id">
+                                </el-option>
+                              </el-select>
+                        </el-form-item>
+                    </div>
+                </el-form-item>
                 <el-form-item label="副本数量">
                     <el-input-number v-model="scaleCount" :min="0" label="副本数量"></el-input-number>
                 </el-form-item>
@@ -656,6 +673,23 @@
         <!-- 更新镜像模态框 -->
         <el-dialog title="更新服务镜像" :visible.sync="showUpdateModal" width="90%">
             <el-form label-width="80px">
+                <el-form-item label-width="80px" label="私有镜像">
+                    <el-switch @change="getAccountList"  v-model="imagePrivateEnabled" active-text="选择授权帐户"></el-switch>
+                </el-form-item>
+                <el-form-item v-if="imagePrivateEnabled">
+                    <div class="health-check-group">
+                        <el-form-item label="选择用户">
+                            <el-select style="width: 100%;" v-model="newImagePrivateId" placeholder="请选择">
+                                <el-option
+                                  v-for="item in accountList"
+                                  :key="item.id"
+                                  :label="'仓库地址:' + item.serveraddress + ' 账户:' + item.username"
+                                  :value="item.id">
+                                </el-option>
+                              </el-select>
+                        </el-form-item>
+                    </div>
+                </el-form-item>
                 <el-form-item label="新镜像">
                     <el-input v-model="newImage" placeholder="例如: nginx:1.23"></el-input>
                 </el-form-item>
@@ -772,6 +806,8 @@
                 },
                 scaleCount: 1,
                 newImage: '',
+                newImagePrivateId: '',
+                imagePrivateEnabled: false,
                 toastMessage: '',
                 toastClass: '',
                 toastTimer: null,
@@ -945,6 +981,7 @@
                     this.currentService = service;
                     this.newImage = this.getImage(service).split('@')[0];
                     this.showUpdateModal = true;
+                    this.getAccountList();
                 },
 
                 openDeleteModal(service) {
@@ -1103,6 +1140,7 @@
                     try {
                         await axios.post(`${this.API_BASE_URL}/scale`, {
                             replicas: this.scaleCount,
+                            imagePrivateId: this.newImagePrivateId,
                             id: this.currentService.ID
                         });
                         this.$message.success('服务伸缩成功');
@@ -1152,6 +1190,7 @@
                     try {
                         await axios.post(`${this.API_BASE_URL}/updateImage`, {
                             image: this.newImage,
+                            imagePrivateId: this.newImagePrivateId,
                             id: this.currentService.ID
                         });
                         this.$message.success('镜像更新成功');

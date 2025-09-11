@@ -3,7 +3,7 @@ include_once "./vendor/autoload.php";
 include_once "./ClientDocker.php";
 include_once "./Dbmanager.php";
 ini_set('date.timezone', 'Asia/Shanghai');
-
+ini_set('max_execution_time', 60);
 use think\facade\Db;
 
 /**
@@ -32,11 +32,11 @@ if (!empty($_GET['action'])) {
                 return;
                 break;
             case '/scale':
-                echo json_encode($docker->serviceReplicas($params['id'], $params['replicas']));
+                echo json_encode($docker->serviceReplicas($params['id'], $params['replicas'], $params));
                 return;
                 break;
             case '/updateImage':
-                echo json_encode($docker->serviceRollingUpdateImages($params['id'], $params['image']));
+                echo json_encode($docker->serviceRollingUpdateImages($params['id'], $params['image'], $params));
                 return;
                 break;
             case '/serviceCreate':

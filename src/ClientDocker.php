@@ -103,19 +103,31 @@ class ClientDocker
      * 服务平滑更新镜像创建任务
      * * 注意时间是纳秒, 有基于curl的80健康检查且自动回滚
      * @param string $service_name
+     * @param string $image
+     * @param array $params
      * @return bool
      * @author jcleng
      */
-    public function serviceRollingUpdateImages($service_name, $image)
+    public function serviceRollingUpdateImages($service_name, $image, $params = [])
     {
         $version = $this->serviceVersion($service_name);
         $inspect = $this->serviceInspect($service_name);
         $update_data = $inspect['Spec'];
         $update_data['TaskTemplate']['ContainerSpec']['Image'] = $image;
         $update_data = $this->removeEmptyKeys($update_data);
-        $response = $this->client->post("/services/$service_name/update?version=$version", [
-            'json' => $update_data
-        ]);
+        $options = [
+            'json' => $update_data,
+        ];
+        if (!empty($params['imagePrivateId'])) {
+            $login_info = Db::table('login')->where('id', $params['imagePrivateId'])
+                ->findOrFail();
+            $options['headers'] = [
+                // 私有镜像凭证, 源json数据不能有换行和空格: https://docs.docker.com/reference/api/engine/version/v1.50/#section/Authentication
+                'X-Registry-Auth' => base64_encode(json_encode($login_info))
+            ];
+        }
+        // error_log(var_export($options, true));
+        $response = $this->client->post("/services/$service_name/update?version=$version", $options);
         return true;
     }
     /**
@@ -126,16 +138,25 @@ class ClientDocker
      * @return bool
      * @author jcleng
      */
-    public function serviceReplicas($service_name, $replicas)
+    public function serviceReplicas($service_name, $replicas, $params = [])
     {
         $version = $this->serviceVersion($service_name);
         $inspect = $this->serviceInspect($service_name);
         $update_data = $inspect['Spec'];
         $update_data['Mode']['Replicated']['Replicas'] = $replicas;
         $update_data = $this->removeEmptyKeys($update_data);
-        $response = $this->client->post("/services/$service_name/update?version=$version", [
-            'json' => $update_data
-        ]);
+        $options = [
+            'json' => $update_data,
+        ];
+        if (!empty($params['imagePrivateId'])) {
+            $login_info = Db::table('login')->where('id', $params['imagePrivateId'])
+                ->findOrFail();
+            $options['headers'] = [
+                // 私有镜像凭证, 源json数据不能有换行和空格: https://docs.docker.com/reference/api/engine/version/v1.50/#section/Authentication
+                'X-Registry-Auth' => base64_encode(json_encode($login_info))
+            ];
+        }
+        $response = $this->client->post("/services/$service_name/update?version=$version", $options);
         return true;
     }
     /**
